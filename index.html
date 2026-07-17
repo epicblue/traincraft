@@ -8,11 +8,12 @@
     :root{--ink:#16231b;--cream:#fff8df;--green:#7fcf5b;--green2:#4f9d50;--gold:#ffd45c;--panel:rgba(18,30,24,.84)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#9edcff;color:white;font-family:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",monospace}
-    body{background:linear-gradient(#71c8f4 0%,#bceaff 62%,#eaf8dc 100%)}
-    canvas{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair;outline:none}
+    body{background:linear-gradient(#71c8f4 0%,#bceaff 62%,#eaf8dc 100%);transition:background .8s linear}
+    #game{position:fixed;inset:0;z-index:1;width:100%;height:100%;display:block;cursor:crosshair;outline:none}
     .hidden{display:none!important}
-    #vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 48%,rgba(13,31,24,.20) 120%)}
-    #hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 2px 0 rgba(0,0,0,.34)}
+    #skyOrb{position:fixed;z-index:0;width:72px;height:72px;border-radius:50%;left:18%;top:13%;background:#ffe98b;box-shadow:0 0 35px rgba(255,235,135,.75);pointer-events:none;transition:background .5s,box-shadow .5s}
+    #vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 48%,rgba(13,31,24,.20) 120%)}
+    #hud{position:fixed;inset:0;z-index:3;pointer-events:none;text-shadow:0 2px 0 rgba(0,0,0,.34)}
     .brand{position:absolute;top:18px;left:20px;display:flex;align-items:center;gap:11px}
     .cube-logo{position:relative;width:36px;height:36px;transform:rotate(30deg) skew(-5deg);filter:drop-shadow(0 4px 0 rgba(0,0,0,.2))}
     .cube-logo i{position:absolute;display:block;background:#6fbc50;border:3px solid #18321f}
@@ -22,6 +23,11 @@
     .quest.done{background:rgba(39,104,59,.9);border-color:#9cf38e}
     .quest .eyebrow{color:#ffd967;font-size:10px;font-weight:900;letter-spacing:2px;margin-bottom:5px}.quest #questText{font:800 13px/1.45 system-ui,sans-serif}
     .status{position:absolute;right:18px;top:18px;display:flex;gap:8px;pointer-events:auto}
+    .world-status{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:7px}
+    .world-status span{padding:8px 11px;background:var(--panel);border:2px solid rgba(255,255,255,.22);border-radius:9px;box-shadow:0 4px 0 rgba(10,18,13,.22);font:900 10px system-ui,sans-serif;letter-spacing:.4px}
+    #crystalHud{color:#e8c8ff}
+    #minimap{position:absolute;right:18px;top:68px;width:146px;height:146px;background:rgba(17,34,24,.78);border:3px solid rgba(255,255,255,.72);border-radius:11px;box-shadow:0 5px 0 rgba(10,18,13,.28);image-rendering:pixelated}
+    .quest-track{height:5px;margin-top:9px;border-radius:5px;background:rgba(255,255,255,.17);overflow:hidden}.quest-track i{display:block;width:12%;height:100%;background:#ffd45c;transition:.4s}
     .chip,.icon-btn{border:2px solid rgba(255,255,255,.25);background:var(--panel);color:#fff;border-radius:9px;box-shadow:0 4px 0 rgba(10,18,13,.22)}
     .chip{padding:8px 11px;font-size:10px;line-height:1.2}.icon-btn{width:38px;height:38px;font-size:17px;cursor:pointer}.icon-btn:hover{transform:translateY(-1px);background:rgba(32,52,41,.92)}
     #crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%)}
@@ -32,6 +38,7 @@
     #hotbar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:7px;padding:8px;background:rgba(15,27,20,.78);border:2px solid rgba(255,255,255,.2);border-radius:12px;box-shadow:0 5px 0 rgba(9,16,11,.24);pointer-events:auto}
     .slot{position:relative;width:54px;height:54px;border:2px solid #6e8075;border-radius:7px;background:rgba(234,243,226,.18);display:grid;place-items:center;transition:.12s}
     .slot.active{border-color:#fff5a8;background:rgba(255,229,105,.24);transform:translateY(-5px);box-shadow:0 4px 0 #d3a635}
+    .slot .count{position:absolute;right:3px;bottom:2px;min-width:17px;padding:1px 3px;border-radius:5px;background:rgba(12,22,16,.75);font:900 9px system-ui,sans-serif;text-align:center}
     .slot .num{position:absolute;left:4px;top:2px;font-size:9px;color:#ecf2eb}.block-icon{width:28px;height:28px;border:3px solid rgba(22,35,27,.55);box-shadow:inset 0 5px rgba(255,255,255,.18),4px 4px 0 rgba(0,0,0,.16)}
     .slot .name{position:absolute;bottom:-17px;font:800 9px system-ui,sans-serif;white-space:nowrap;opacity:0}.slot.active .name{opacity:1}
     #toast{position:absolute;left:50%;top:24%;transform:translate(-50%,-10px) scale(.94);padding:15px 20px;border:3px solid #17301e;background:#fff8d9;color:#17301e;border-radius:12px;box-shadow:0 8px 0 rgba(16,33,21,.35);font:900 16px system-ui,sans-serif;text-shadow:none;opacity:0;transition:.25s;white-space:nowrap}
@@ -43,46 +50,50 @@
     .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 25px}.control{padding:12px 9px;border:2px solid #cfcca7;border-radius:9px;background:#eeeac7;text-align:center;font:800 11px/1.4 system-ui,sans-serif}.keys{display:block;color:#3a7243;font:900 13px ui-monospace,monospace;margin-bottom:3px}
     #start{width:100%;border:3px solid #194025;border-radius:10px;padding:14px 18px;background:#6ac653;color:#132c1b;box-shadow:0 6px 0 #2f7138;font:1000 17px system-ui,sans-serif;cursor:pointer;transition:.1s}#start:hover{transform:translateY(-2px);filter:brightness(1.06)}#start:active{transform:translateY(4px);box-shadow:0 2px 0 #2f7138}
     .tip{margin:16px 0 0;text-align:center;font:700 10px/1.5 system-ui,sans-serif;color:#788176}
-    #damage{position:fixed;inset:0;pointer-events:none;background:rgba(255,40,25,.0);transition:.15s}
+    .particle{position:fixed;left:50%;top:50%;z-index:12;width:8px;height:8px;border:2px solid rgba(20,28,22,.45);pointer-events:none;animation:pop .45s ease-out forwards}@keyframes pop{to{transform:translate(var(--x),var(--y)) rotate(180deg);opacity:0}}
+    #damage{position:fixed;inset:0;z-index:4;pointer-events:none;background:rgba(255,40,25,.0);transition:.15s}
     .touch-ui{display:none;position:fixed;inset:0;z-index:5;pointer-events:none}.dpad{position:absolute;left:20px;bottom:24px;width:136px;height:136px}.touch-btn{position:absolute;width:48px;height:48px;border:2px solid rgba(255,255,255,.5);border-radius:13px;background:rgba(20,38,27,.52);color:white;font-size:18px;pointer-events:auto;touch-action:none}.up{left:44px;top:0}.down{left:44px;bottom:0}.left{left:0;top:44px}.right{right:0;top:44px}.touch-actions{position:absolute;right:20px;bottom:27px;display:flex;align-items:flex-end;gap:10px}.touch-actions .touch-btn{position:relative;width:58px;height:58px;font:900 11px system-ui,sans-serif}.touch-actions .jump{width:68px;height:68px;border-radius:50%}
-    @media (pointer:coarse),(max-width:720px){.touch-ui{display:block}.status .chip{display:none}#hotbar{bottom:170px}.slot{width:44px;height:44px}.block-icon{width:23px;height:23px}#prompt{bottom:235px}.brand{top:12px;left:12px}.quest{left:12px;top:64px}.status{right:10px;top:10px}.controls{grid-template-columns:1fr}.control:nth-child(2),.control:nth-child(3){display:none}.card{padding:28px 22px}.mini-title{letter-spacing:-2px}}
+    @media (pointer:coarse),(max-width:720px){.touch-ui{display:block}.status .chip{display:none}.world-status{top:12px;left:50%}.world-status span{padding:6px 8px}#minimap{display:none}#hotbar{bottom:170px}.slot{width:44px;height:44px}.block-icon{width:23px;height:23px}#prompt{bottom:235px}.brand{top:12px;left:12px}.quest{left:12px;top:64px}.status{right:10px;top:10px}.controls{grid-template-columns:1fr}.control:nth-child(2),.control:nth-child(3){display:none}.card{padding:28px 22px}.mini-title{letter-spacing:-2px}}
   </style>
 </head>
 <body>
+  <div id="skyOrb"></div>
   <canvas id="game" tabindex="0" aria-label="MINICRAFT 3D 游戏画面"></canvas>
   <div id="vignette"></div><div id="damage"></div>
 
   <div id="hud">
     <div class="brand"><div class="cube-logo"><i></i></div><div><b>MINICRAFT</b><small>林间小屋</small></div></div>
-    <div class="quest" id="quest"><div class="eyebrow">当前任务 · QUEST</div><div id="questText">找到木门，按 E 打开它</div></div>
+    <div class="quest" id="quest"><div class="eyebrow">当前任务 · QUEST</div><div id="questText">找到木门，按 E 打开它</div><div class="quest-track"><i id="questProgress"></i></div></div>
+    <div class="world-status"><span id="clockHud">☀ 08:00</span><span id="crystalHud">✦ 星晶 0/3</span></div>
+    <canvas id="minimap" width="160" height="160" aria-label="小地图"></canvas>
     <div class="status"><div class="chip" id="coords">X 12 · Y 1 · Z 23</div><button class="icon-btn" id="soundBtn" title="声音">♪</button><button class="icon-btn" id="resetBtn" title="重新开始">↻</button><button class="icon-btn" id="fullBtn" title="全屏">⛶</button></div>
     <div id="crosshair"></div>
     <div id="prompt"><kbd>E</kbd><span>打开木门</span></div>
     <div id="toast">🏠 欢迎回家！任务完成</div>
     <div id="hotbar">
-      <div class="slot active" data-type="1"><span class="num">1</span><i class="block-icon" style="background:linear-gradient(#69bd50 38%,#8b5b3b 39%)"></i><span class="name">草方块</span></div>
-      <div class="slot" data-type="2"><span class="num">2</span><i class="block-icon" style="background:#b57a43"></i><span class="name">木板</span></div>
-      <div class="slot" data-type="3"><span class="num">3</span><i class="block-icon" style="background:#89918d"></i><span class="name">石头</span></div>
-      <div class="slot" data-type="4"><span class="num">4</span><i class="block-icon" style="background:#b94f3d"></i><span class="name">砖块</span></div>
+      <div class="slot active" data-type="1"><span class="num">1</span><i class="block-icon" style="background:linear-gradient(#69bd50 38%,#8b5b3b 39%)"></i><span class="count">12</span><span class="name">草方块</span></div>
+      <div class="slot" data-type="2"><span class="num">2</span><i class="block-icon" style="background:#b57a43"></i><span class="count">18</span><span class="name">木板</span></div>
+      <div class="slot" data-type="3"><span class="num">3</span><i class="block-icon" style="background:#89918d"></i><span class="count">12</span><span class="name">石头</span></div>
+      <div class="slot" data-type="4"><span class="num">4</span><i class="block-icon" style="background:#b94f3d"></i><span class="count">10</span><span class="name">砖块</span></div>
     </div>
   </div>
 
   <div class="touch-ui">
     <div class="dpad"><button class="touch-btn up" data-key="KeyW">▲</button><button class="touch-btn down" data-key="KeyS">▼</button><button class="touch-btn left" data-key="KeyA">◀</button><button class="touch-btn right" data-key="KeyD">▶</button></div>
-    <div class="touch-actions"><button class="touch-btn" id="touchUse">开门</button><button class="touch-btn" id="touchMine">挖掘</button><button class="touch-btn jump" data-key="Space">跳跃</button></div>
+    <div class="touch-actions"><button class="touch-btn" id="touchUse">互动</button><button class="touch-btn" id="touchMine">挖掘</button><button class="touch-btn jump" data-key="Space">跳跃</button></div>
   </div>
 
   <div id="intro">
     <section class="card">
       <h1 class="mini-title"><span>MINI</span>CRAFT</h1>
-      <p class="subtitle">穿过草地，打开木门，走进属于你的林间小屋。<br>世界很小，冒险刚刚好。</p>
+      <p class="subtitle">穿过会昼夜变化的方块森林，打开木门，探索小屋里的秘密宝箱。<br>还能建造、收集星晶，并用小地图寻找方向。</p>
       <div class="controls">
         <div class="control"><span class="keys">W A S D</span>移动与探索</div>
         <div class="control"><span class="keys">鼠标 · 方向键</span>转动视角</div>
-        <div class="control"><span class="keys">E · 空格</span>开门 · 跳跃</div>
+        <div class="control"><span class="keys">E · 空格</span>互动 · 跳跃</div>
       </div>
       <button id="start">开始探索 →</button>
-      <p class="tip">左键挖掘 · 右键放置 · 数字键 1–4 切换方块<br>若无法锁定鼠标，也可按住画面拖动视角</p>
+      <p class="tip">左键挖掘并收集 · 右键消耗材料放置 · 数字键 1–4 切换方块<br>若无法锁定鼠标，也可按住画面拖动视角</p>
     </section>
   </div>
 
@@ -97,19 +108,26 @@
   const vs = `
     attribute vec3 aPos; attribute vec3 aColor;
     uniform mat4 uMVP; uniform vec3 uEye;
-    varying vec3 vColor; varying float vDist;
-    void main(){ gl_Position=uMVP*vec4(aPos,1.0); vColor=aColor; vDist=distance(aPos,uEye); }
+    varying mediump vec3 vColor; varying mediump float vDist; varying mediump vec3 vWorld;
+    void main(){ gl_Position=uMVP*vec4(aPos,1.0); vColor=aColor; vWorld=aPos; vDist=distance(aPos,uEye); }
   `;
   const fs = `
     precision mediump float;
-    varying vec3 vColor; varying float vDist;
-    uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar;
-    void main(){ float f=smoothstep(uFogNear,uFogFar,vDist); gl_FragColor=vec4(mix(vColor,uFog,f),1.0); }
+    varying mediump vec3 vColor; varying mediump float vDist; varying mediump vec3 vWorld;
+    uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uLight; uniform vec3 uLamp;
+    void main(){
+      float f=smoothstep(uFogNear,uFogFar,vDist);
+      float lamp=clamp(1.0-distance(vWorld,uLamp)/6.5,0.0,1.0);
+      float illumination=max(uLight,0.28+lamp*0.82);
+      vec3 lit=vColor*illumination;
+      gl_FragColor=vec4(mix(lit,uFog,f),1.0);
+    }
   `;
   function shader(type, source){ const s=gl.createShader(type); gl.shaderSource(s,source); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
   const program=gl.createProgram(); gl.attachShader(program,shader(gl.VERTEX_SHADER,vs)); gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(program); gl.useProgram(program);
   const aPos=gl.getAttribLocation(program,'aPos'), aColor=gl.getAttribLocation(program,'aColor');
   const uMVP=gl.getUniformLocation(program,'uMVP'), uEye=gl.getUniformLocation(program,'uEye'), uFog=gl.getUniformLocation(program,'uFog'), uFogNear=gl.getUniformLocation(program,'uFogNear'), uFogFar=gl.getUniformLocation(program,'uFogFar');
+  const uLight=gl.getUniformLocation(program,'uLight'), uLamp=gl.getUniformLocation(program,'uLamp');
   const meshBuffer=gl.createBuffer(), lineBuffer=gl.createBuffer();
 
   // ---------- World data ----------
@@ -122,7 +140,8 @@
     1:[.47,.67,.25], 2:[.64,.39,.19], 3:[.47,.50,.48], 4:[.62,.20,.14],
     5:[.38,.23,.12], 6:[.25,.52,.22], 7:[.45,.78,.88], 8:[.48,.25,.10],
     9:[1.0,.68,.16], 10:[.70,.16,.13], 11:[.60,.48,.31], 12:[.92,.76,.22],
-    13:[.94,.90,.78], 14:[.93,.97,1.0], 15:[.35,.42,.38]
+    13:[.94,.90,.78], 14:[.93,.97,1.0], 15:[.35,.42,.38],
+    16:[.55,.29,.10], 17:[.72,.25,1.0], 18:[.18,.52,.78], 19:[.37,.19,.08], 20:[.95,.43,.08]
   };
   function blockColor(type, face, x,y,z){
     let c=(palette[type]||palette[3]).slice();
@@ -130,6 +149,9 @@
     if(type===2 && (face===0||face===1||face===4||face===5)){ const stripe=((x+y+z)&1)?1:.88; c=c.map(v=>v*stripe); }
     if(type===4){ const brick=((x*3+y+z)&1)?1:.82; c=c.map(v=>v*brick); }
     if(type===7) c=[.47,.80,.91];
+    if(type===16){ const band=(face===2||((x+y+z)&1))?1:.72; c=c.map(v=>v*band); }
+    if(type===17){ const pulse=.88+Math.sin(performance.now()*.004+x)*.12; c=[.68*pulse,.22*pulse,1.0]; }
+    if(type===18) c=face===2?[.20,.62,.88]:[.13,.39,.66];
     const light=[.78,.70,1.03,.55,.88,.82][face];
     const jitter=1+((((x*17+y*31+z*13)&7)-3)*.008);
     return c.map(v=>Math.min(1,v*light*jitter));
@@ -147,13 +169,24 @@
     // Door and windows
     set(11,1,15,8); set(11,2,15,8);
     [[9,2,15],[14,2,15],[7,2,9],[7,2,12],[16,2,9],[16,2,12],[10,2,6],[13,2,6]].forEach(p=>set(...p,7));
-    // Roof, overhang, chimney
-    for(let x=6;x<=17;x++) for(let z=5;z<=16;z++) set(x,4,z,4);
-    set(15,5,8,3); set(15,6,8,3);
-    // Interior: bed, table, chairs, lamp, shelf
+    // Stepped gable roof and wooden gables
+    for(let z=5;z<=16;z++){
+      set(6,4,z,4); set(17,4,z,4); set(7,5,z,4); set(16,5,z,4);
+      set(8,6,z,4); set(15,6,z,4); set(9,7,z,4); set(14,7,z,4);
+      for(let x=10;x<=13;x++) set(x,8,z,4);
+    }
+    for(const z of [6,15]){
+      for(let x=7;x<=16;x++) set(x,4,z,2);
+      for(let x=8;x<=15;x++) set(x,5,z,2);
+      for(let x=9;x<=14;x++) set(x,6,z,2);
+      for(let x=10;x<=13;x++) set(x,7,z,2);
+      set(11,5,z,7); set(12,5,z,7);
+    }
+    set(15,7,8,3); set(15,8,8,3); set(15,9,8,3);
+    // Interior: bed, table, chairs, warm lamp, shelf and treasure chest
     set(9,1,8,10); set(9,1,9,10); set(10,1,8,13);
     set(13,1,10,2); set(13,1,9,5); set(13,1,11,5); set(12,3,10,9);
-    set(15,1,7,2); set(15,2,7,12); set(8,1,13,3);
+    set(15,1,7,2); set(15,2,7,12); set(8,1,13,3); set(14,1,13,16);
     // A little front step
     set(11,0,16,3); set(12,0,16,3);
     // Trees
@@ -165,9 +198,14 @@
       }
       set(x,h+3,z,6);
     });
-    // Flowers / rocks
+    // Pond, garden, flowers / rocks
+    for(let x=24;x<=28;x++) for(let z=2;z<=5;z++) if(Math.hypot(x-26,z-3.5)<3) set(x,0,z,18);
+    for(let x=18;x<=21;x++) for(let z=12;z<=15;z++){ set(x,0,z,11); if((x+z)%2===0)set(x,1,z,12); }
     [[5,18],[18,18],[23,14],[9,20],[26,24],[19,29],[2,26]].forEach((p,i)=>set(p[0],1,p[1],i%2?12:10));
     [[22,7],[25,6],[2,19],[29,13]].forEach(p=>set(p[0],1,p[1],3));
+    // Three optional star crystals and a blocky sheep
+    [[5,1,18],[23,1,14],[26,1,24]].forEach(p=>set(...p,17));
+    set(20,1,21,13); set(21,1,21,13); set(19,1,21,15); set(19,2,21,13);
     // Boundary hedge to keep the tiny world cozy
     for(let i=0;i<W;i++){ if(i%5!==2){set(i,1,0,6);set(i,1,D-1,6);} }
     for(let i=0;i<D;i++){ if(i%6!==3){set(0,1,i,6);set(W-1,1,i,6);} }
@@ -218,10 +256,13 @@
 
   // ---------- Player & physics ----------
   const spawn={x:11.5,y:1.01,z:24.5,yaw:0};
-  const player={x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,onGround:false};
-  const keys={}; let selected=1, started=false, doorOpen=false, questDone=false, soundOn=true;
+  const player={x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,onGround:false,bob:0};
+  const keys={}; let selected=1, started=false, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
+  let questStage=0, crystals=0, worldTime=8, skyLight=1;
+  const stock={1:12,2:18,3:12,4:10};
+  const mini=document.getElementById('minimap'), miniCtx=mini.getContext('2d');
   const radius=.28, height=1.72;
-  const eye=()=>[player.x,player.y+1.56,player.z];
+  const eye=()=>[player.x,player.y+1.56+(player.onGround?Math.sin(player.bob*2)*.018:0),player.z];
   function solidAt(x,y,z){
     if(!insideWorld(x,z)) return true;
     return !!get(Math.floor(x),Math.floor(y),Math.floor(z));
@@ -232,26 +273,30 @@
     return x-radius<.05||z-radius<.05||x+radius>W-.05||z+radius>D-.05;
   }
   function update(dt){
+    worldTime=(worldTime+dt*.065)%24;
     let forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0);
     let side=(keys.KeyD?1:0)-(keys.KeyA?1:0);
     if(keys.ArrowLeft) player.yaw-=1.75*dt; if(keys.ArrowRight) player.yaw+=1.75*dt;
     const len=Math.hypot(forward,side)||1; forward/=len;side/=len;
+    const moving=Math.abs(forward)+Math.abs(side)>.01;
     const speed=(keys.ShiftLeft||keys.ShiftRight)?5.0:3.25;
     const dx=(Math.sin(player.yaw)*forward+Math.cos(player.yaw)*side)*speed*dt;
     const dz=(-Math.cos(player.yaw)*forward+Math.sin(player.yaw)*side)*speed*dt;
     if(!collides(player.x+dx,player.y,player.z)) player.x+=dx;
     if(!collides(player.x,player.y,player.z+dz)) player.z+=dz;
+    if(moving&&player.onGround)player.bob+=dt*(speed>4?8:6);
     player.vy-=18*dt;
     let ny=player.y+player.vy*dt;
     if(!collides(player.x,ny,player.z)){player.y=ny;player.onGround=false;}
     else { if(player.vy<0) player.onGround=true; player.vy=0; }
     if(player.y<.5) resetGame();
-    const inHouse=player.x>7.2&&player.x<15.8&&player.z>6.2&&player.z<14.8&&player.y<4;
-    if(inHouse&&!questDone){
-      questDone=true; document.getElementById('quest').classList.add('done'); document.getElementById('questText').textContent='已进入林间小屋 · 欢迎回家！';
-      toast('🏠 欢迎回家！任务完成'); tone(660,.12,'sine'); setTimeout(()=>tone(880,.18,'sine'),110);
+    const inHouse=isInHouse();
+    if(inHouse&&questStage<2){
+      questStage=2; document.getElementById('questText').textContent='找到屋内角落的宝箱，按 E 开启';
+      document.getElementById('questProgress').style.width='72%';
+      toast('🏠 已进入小屋 · 找找宝箱！'); tone(660,.12,'sine'); setTimeout(()=>tone(780,.14,'sine'),110);
     }
-    updateHud();
+    updateSky(); updateHud();
   }
   function jump(){if(player.onGround){player.vy=6.5;player.onGround=false;tone(170,.06,'square');}}
 
@@ -266,29 +311,56 @@
     }
     return null;
   }
+  function isInHouse(){return player.x>7.2&&player.x<15.8&&player.z>6.2&&player.z<14.8&&player.y<4;}
   function doorDistance(){return Math.hypot(player.x-11.5,player.z-15.5);}
+  function chestDistance(){return Math.hypot(player.x-14.5,player.z-13.5);}
+  function interact(){
+    if(!chestOpened&&chestDistance()<2.7&&isInHouse()){useChest();return;}
+    if(doorDistance()<3.15){useDoor();return;}
+    toast('这里没有可互动的东西');
+  }
+  function useChest(){
+    if(chestOpened||chestDistance()>2.7||!isInHouse())return;
+    chestOpened=true;set(14,1,13,19);rebuildMesh();
+    stock[2]+=8;stock[3]+=5;stock[4]+=4;updateInventory();
+    questDone=true;questStage=3;document.getElementById('quest').classList.add('done');
+    document.getElementById('questText').textContent='小屋探索完成 · 继续建造或寻找星晶';
+    document.getElementById('questProgress').style.width='100%';
+    toast('🎁 宝箱：木板 +8 · 石头 +5 · 砖块 +4');
+    tone(523,.10,'sine');setTimeout(()=>tone(659,.10,'sine'),90);setTimeout(()=>tone(784,.18,'sine'),180);
+  }
   function useDoor(){
     if(doorDistance()>3.15){toast('再靠近木门一点');return;}
     doorOpen=!doorOpen; set(11,1,15,doorOpen?0:8);set(11,2,15,doorOpen?0:8);rebuildMesh();
     document.querySelector('#prompt span').textContent=doorOpen?'关闭木门':'打开木门';
-    if(doorOpen){document.getElementById('questText').textContent='门开了！走进小屋看看';toast('门打开了 · 请进！');}
+    if(doorOpen&&questStage<1){questStage=1;document.getElementById('questText').textContent='门开了！走进小屋看看';document.getElementById('questProgress').style.width='42%';toast('门打开了 · 请进！');}
     tone(doorOpen?280:190,.13,'square');
   }
   function mine(){
     const hit=raycast(); if(!hit)return;
     const [x,y,z]=hit.block;
     if(hit.type===8){useDoor();return;}
+    if(hit.type===16||hit.type===19){if(!chestOpened)useChest();return;}
     if(y<=0){toast('草地要留在脚下');return;}
-    set(x,y,z,0);rebuildMesh();tone(105,.07,'square');
+    if(hit.type===17){
+      set(x,y,z,0);crystals=Math.min(3,crystals+1);rebuildMesh();burst('#b56cff');
+      toast(`✦ 找到星晶 ${crystals}/3${crystals===3?' · 全部收集！':''}`);tone(760+crystals*90,.15,'sine');updateHud();return;
+    }
+    const drop=hit.type===3?3:hit.type===4?4:[2,5,8].includes(hit.type)?2:hit.type===1?1:0;
+    if(drop)stock[drop]=Math.min(99,stock[drop]+1);
+    set(x,y,z,0);rebuildMesh();updateInventory();burst(drop===2?'#b57a43':drop===3?'#89918d':'#73bd4f');tone(105,.07,'square');
   }
   function place(){
     const hit=raycast(); if(!hit||!hit.place)return;
     const [x,y,z]=hit.place;if(y<0||y>10||!insideWorld(x,z))return;
+    if(stock[selected]<=0){toast('这种材料用完了，先去挖一些');return;}
     set(x,y,z,selected);
     if(collides(player.x,player.y,player.z)){set(x,y,z,0);toast('不能放在自己身上');return;}
-    rebuildMesh();tone(145,.05,'square');
+    stock[selected]--;rebuildMesh();updateInventory();burst('#ffd45c');tone(145,.05,'square');
   }
   function select(n){ selected=n; document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('active',+s.dataset.type===n)); tone(420+n*40,.035,'sine'); }
+  function updateInventory(){document.querySelectorAll('.slot').forEach(s=>s.querySelector('.count').textContent=stock[+s.dataset.type]||0);}
+  function burst(color){for(let i=0;i<7;i++){const p=document.createElement('i');p.className='particle';p.style.background=color;p.style.setProperty('--x',`${(Math.random()-.5)*120}px`);p.style.setProperty('--y',`${(Math.random()-.65)*110}px`);document.body.appendChild(p);setTimeout(()=>p.remove(),480);}}
 
   // ---------- Rendering ----------
   function resize(){const dpr=Math.min(devicePixelRatio||1,1.75),w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
@@ -306,7 +378,7 @@
     resize();gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
     const e=eye(),d=forwardVector(),center=[e[0]+d[0],e[1]+d[1],e[2]+d[2]];
     const mvp=mul(perspective(Math.PI/3,canvas.width/canvas.height,.06,65),lookAt(e,center,[0,1,0]));
-    gl.uniformMatrix4fv(uMVP,false,mvp);gl.uniform3fv(uEye,e);gl.uniform3f(uFog,.54,.80,.91);gl.uniform1f(uFogNear,20);gl.uniform1f(uFogFar,47);
+    gl.uniformMatrix4fv(uMVP,false,mvp);gl.uniform3fv(uEye,e);gl.uniform3fv(uFog,currentFog);gl.uniform1f(uFogNear,18);gl.uniform1f(uFogFar,45);gl.uniform1f(uLight,skyLight);gl.uniform3f(uLamp,12.5,3.4,10.5);
     gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);gl.enableVertexAttribArray(aPos);gl.enableVertexAttribArray(aColor);gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(aColor,3,gl.FLOAT,false,24,12);
     gl.drawArrays(gl.TRIANGLES,0,vertexCount);drawTarget(mvp);
   }
@@ -315,9 +387,35 @@
 
   // ---------- UI, input, sound ----------
   const prompt=document.getElementById('prompt'), toastEl=document.getElementById('toast'); let toastTimer;
+  let currentFog=new Float32Array([.54,.80,.91]), mapTick=0;
+  function updateSky(){
+    const sun=Math.max(0,Math.sin((worldTime-6)/12*Math.PI));skyLight=.26+.74*sun;
+    const dawn=Math.max(0,1-Math.abs(worldTime-6)/2)+Math.max(0,1-Math.abs(worldTime-18)/2);
+    currentFog=new Float32Array([.055+.49*sun+.20*dawn,.09+.71*sun+.05*dawn,.18+.73*sun]);
+    const top=[Math.round(12+95*sun+90*dawn),Math.round(25+150*sun+45*dawn),Math.round(55+185*sun)];
+    const bottom=[Math.round(28+175*sun),Math.round(42+195*sun),Math.round(72+165*sun)];
+    document.body.style.background=`linear-gradient(rgb(${top}) 0%,rgb(${bottom}) 68%,#dceacb 100%)`;
+    const orb=document.getElementById('skyOrb'),phase=(worldTime-6)/24*Math.PI*2;
+    orb.style.left=`${8+((worldTime+18)%24)/24*84}%`;orb.style.top=`${58-Math.sin(phase)*45}%`;
+    const night=sun<.08;orb.style.background=night?'#dce7ff':'#ffe98b';orb.style.boxShadow=night?'0 0 28px rgba(190,215,255,.5)':'0 0 35px rgba(255,235,135,.75)';
+  }
+  function drawMinimap(){
+    const c=miniCtx,sc=5;c.clearRect(0,0,160,160);
+    for(let x=0;x<W;x++)for(let z=0;z<D;z++){
+      const ground=get(x,0,z),above=get(x,1,z);let col=ground===18?'#398fc2':ground===2?'#b77843':ground===11?'#9b8053':'#6fbd50';
+      if(above===6)col='#2d7138';else if([2,4,7,8].includes(above))col='#d08a53';else if(above===17)col='#c56cff';
+      c.fillStyle=col;c.fillRect(x*sc,z*sc,sc,sc);
+    }
+    c.save();c.translate(player.x*sc,player.z*sc);c.rotate(player.yaw);c.fillStyle='#fff36d';c.strokeStyle='#17321f';c.lineWidth=1.5;c.beginPath();c.moveTo(0,-6);c.lineTo(4,5);c.lineTo(-4,5);c.closePath();c.fill();c.stroke();c.restore();
+  }
   function updateHud(){
     document.getElementById('coords').textContent=`X ${player.x.toFixed(1)} · Y ${player.y.toFixed(1)} · Z ${player.z.toFixed(1)}`;
-    prompt.classList.toggle('show',doorDistance()<3.15&&!questDone);
+    const h=Math.floor(worldTime),m=Math.floor((worldTime-h)*60);document.getElementById('clockHud').textContent=`${worldTime>6&&worldTime<18?'☀':'☾'} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    document.getElementById('crystalHud').textContent=`✦ 星晶 ${crystals}/3`;
+    const nearChest=!chestOpened&&chestDistance()<2.7&&isInHouse(),nearDoor=doorDistance()<3.15;
+    prompt.classList.toggle('show',nearChest||nearDoor);
+    document.querySelector('#prompt span').textContent=nearChest?'打开宝箱':doorOpen?'关闭木门':'打开木门';
+    if((mapTick++&3)===0)drawMinimap();
   }
   function toast(text){toastEl.textContent=text;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1800);}
   let audioCtx;
@@ -327,7 +425,7 @@
   addEventListener('keydown',e=>{
     keys[e.code]=true;
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
-    if(e.code==='Space'&&!e.repeat)jump(); if(e.code==='KeyE'&&!e.repeat)useDoor();
+    if(e.code==='Space'&&!e.repeat)jump(); if(e.code==='KeyE'&&!e.repeat)interact();
     if(/^Digit[1-4]$/.test(e.code))select(+e.code.slice(5));
   });
   addEventListener('keyup',e=>keys[e.code]=false);
@@ -348,8 +446,9 @@
   canvas.addEventListener('wheel',e=>{e.preventDefault();select(selected%4+1);},{passive:false});
   document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>select(+s.dataset.type)));
   function resetGame(){
-    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0});doorOpen=false;questDone=false;buildWorld();rebuildMesh();
-    document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');
+    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,bob:0});doorOpen=false;chestOpened=false;questDone=false;questStage=0;crystals=0;worldTime=8;
+    Object.assign(stock,{1:12,2:18,3:12,4:10});buildWorld();rebuildMesh();updateInventory();
+    document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.getElementById('questProgress').style.width='12%';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');
   }
   document.getElementById('resetBtn').addEventListener('click',resetGame);
   document.getElementById('soundBtn').addEventListener('click',e=>{soundOn=!soundOn;e.currentTarget.textContent=soundOn?'♪':'×';toast(soundOn?'声音已开启':'声音已关闭');});
@@ -359,13 +458,15 @@
     const code=b.dataset.key;const on=e=>{e.preventDefault();keys[code]=true;if(code==='Space')jump();};const off=e=>{e.preventDefault();keys[code]=false;};
     b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
   });
-  document.getElementById('touchUse').addEventListener('pointerdown',e=>{e.preventDefault();useDoor();});
+  document.getElementById('touchUse').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
   document.getElementById('touchMine').addEventListener('pointerdown',e=>{e.preventDefault();mine();});
   let touchLook=null;
   canvas.addEventListener('touchstart',e=>{if(!started||e.touches.length!==1)return;touchLook=[e.touches[0].clientX,e.touches[0].clientY];},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(!touchLook||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-touchLook[0],dy=t.clientY-touchLook[1];player.yaw+=dx*.008;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*.006));touchLook=[t.clientX,t.clientY];e.preventDefault();},{passive:false});
   canvas.addEventListener('touchend',()=>touchLook=null);
+  updateInventory();updateSky();drawMinimap();
 })();
 </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a194ee3d2fcbef9b',t:'MTc4Mzc0MjczNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
