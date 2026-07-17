@@ -50,10 +50,18 @@
     .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 25px}.control{padding:12px 9px;border:2px solid #cfcca7;border-radius:9px;background:#eeeac7;text-align:center;font:800 11px/1.4 system-ui,sans-serif}.keys{display:block;color:#3a7243;font:900 13px ui-monospace,monospace;margin-bottom:3px}
     #start{width:100%;border:3px solid #194025;border-radius:10px;padding:14px 18px;background:#6ac653;color:#132c1b;box-shadow:0 6px 0 #2f7138;font:1000 17px system-ui,sans-serif;cursor:pointer;transition:.1s}#start:hover{transform:translateY(-2px);filter:brightness(1.06)}#start:active{transform:translateY(4px);box-shadow:0 2px 0 #2f7138}
     .tip{margin:16px 0 0;text-align:center;font:700 10px/1.5 system-ui,sans-serif;color:#788176}
-    .particle{position:fixed;left:50%;top:50%;z-index:12;width:8px;height:8px;border:2px solid rgba(20,28,22,.45);pointer-events:none;animation:pop .45s ease-out forwards}@keyframes pop{to{transform:translate(var(--x),var(--y)) rotate(180deg);opacity:0}}
+    #craftPanel{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:rgba(8,18,12,.68);backdrop-filter:blur(6px)}
+    .craft-card{width:min(590px,100%);padding:25px;border:3px solid #183721;border-radius:15px;background:#fff7d8;color:#17291d;box-shadow:0 12px 0 rgba(9,22,13,.5),inset 0 0 0 4px #fffdf0}
+    .craft-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.craft-head h2{margin:0;font:1000 27px system-ui,sans-serif}.craft-head p{margin:5px 0 0;color:#657166;font:700 11px system-ui,sans-serif}
+    .close-craft{width:38px;height:38px;border:2px solid #8c927d;border-radius:8px;background:#e6e1be;color:#213025;font-size:20px;cursor:pointer}
+    #craftStock{margin:0 0 13px;padding:10px 12px;border:2px solid #cfcca7;border-radius:8px;background:#eeeac7;font:800 11px/1.5 system-ui,sans-serif;color:#4a5b4e}
+    .recipes{display:grid;gap:9px}.recipe{display:grid;grid-template-columns:45px 1fr auto;align-items:center;gap:12px;padding:11px;border:2px solid #d4cfaa;border-radius:10px;background:#f1edce}.recipe-icon{width:40px;height:40px;display:grid;place-items:center;border:3px solid #314334;box-shadow:inset 0 7px rgba(255,255,255,.2),3px 3px 0 rgba(0,0,0,.14);font-size:20px}.recipe b{display:block;font:900 13px system-ui,sans-serif}.recipe small{display:block;margin-top:3px;color:#677165;font:700 10px system-ui,sans-serif}.craft-action{border:2px solid #255b31;border-radius:8px;padding:9px 13px;background:#6ac653;color:#16301d;box-shadow:0 3px 0 #34733b;font:900 11px system-ui,sans-serif;cursor:pointer}.craft-action:disabled{filter:grayscale(1);opacity:.45;box-shadow:none;cursor:not-allowed}
+    .craft-foot{margin:15px 0 0;text-align:center;color:#768076;font:700 10px system-ui,sans-serif}
+    .save-dot{position:relative}.save-dot.saved:after{content:"";position:absolute;right:2px;top:2px;width:7px;height:7px;border-radius:50%;background:#8cff75;box-shadow:0 0 8px #8cff75;animation:saveblink .8s ease-out}@keyframes saveblink{to{opacity:0;transform:scale(1.8)}}
+    .particle{position:fixed;left:50%;top:50%;z-index:40;width:8px;height:8px;border:2px solid rgba(20,28,22,.45);pointer-events:none;animation:pop .45s ease-out forwards}@keyframes pop{to{transform:translate(var(--x),var(--y)) rotate(180deg);opacity:0}}
     #damage{position:fixed;inset:0;z-index:4;pointer-events:none;background:rgba(255,40,25,.0);transition:.15s}
-    .touch-ui{display:none;position:fixed;inset:0;z-index:5;pointer-events:none}.dpad{position:absolute;left:20px;bottom:24px;width:136px;height:136px}.touch-btn{position:absolute;width:48px;height:48px;border:2px solid rgba(255,255,255,.5);border-radius:13px;background:rgba(20,38,27,.52);color:white;font-size:18px;pointer-events:auto;touch-action:none}.up{left:44px;top:0}.down{left:44px;bottom:0}.left{left:0;top:44px}.right{right:0;top:44px}.touch-actions{position:absolute;right:20px;bottom:27px;display:flex;align-items:flex-end;gap:10px}.touch-actions .touch-btn{position:relative;width:58px;height:58px;font:900 11px system-ui,sans-serif}.touch-actions .jump{width:68px;height:68px;border-radius:50%}
-    @media (pointer:coarse),(max-width:720px){.touch-ui{display:block}.status .chip{display:none}.world-status{top:12px;left:50%}.world-status span{padding:6px 8px}#minimap{display:none}#hotbar{bottom:170px}.slot{width:44px;height:44px}.block-icon{width:23px;height:23px}#prompt{bottom:235px}.brand{top:12px;left:12px}.quest{left:12px;top:64px}.status{right:10px;top:10px}.controls{grid-template-columns:1fr}.control:nth-child(2),.control:nth-child(3){display:none}.card{padding:28px 22px}.mini-title{letter-spacing:-2px}}
+    .touch-ui{display:none;position:fixed;inset:0;z-index:5;pointer-events:none}.dpad{position:absolute;left:20px;bottom:24px;width:136px;height:136px}.touch-btn{position:absolute;width:48px;height:48px;border:2px solid rgba(255,255,255,.5);border-radius:13px;background:rgba(20,38,27,.52);color:white;font-size:18px;pointer-events:auto;touch-action:none}.up{left:44px;top:0}.down{left:44px;bottom:0}.left{left:0;top:44px}.right{right:0;top:44px}.touch-actions{position:absolute;right:20px;bottom:24px;display:grid;grid-template-columns:58px 68px;grid-template-rows:58px 68px;gap:8px;align-items:center}.touch-actions .touch-btn{position:relative;width:58px;height:58px;font:900 11px system-ui,sans-serif}.touch-actions .jump{grid-column:2;grid-row:2;width:68px;height:68px;border-radius:50%}
+    @media (pointer:coarse),(max-width:720px){#saveBtn,#soundBtn,#resetBtn,#fullBtn{display:none}.craft-card{padding:19px}.recipe{grid-template-columns:39px 1fr auto;padding:9px}.recipe-icon{width:36px;height:36px}.touch-ui{display:block}.status .chip{display:none}.world-status{top:12px;left:50%}.world-status span{padding:6px 8px}#minimap{display:none}#hotbar{bottom:170px}.slot{width:44px;height:44px}.block-icon{width:23px;height:23px}#prompt{bottom:235px}.brand{top:12px;left:12px}.quest{left:12px;top:64px}.status{right:10px;top:10px}.controls{grid-template-columns:1fr}.control:nth-child(2),.control:nth-child(3){display:none}.card{padding:28px 22px}.mini-title{letter-spacing:-2px}}
   </style>
 </head>
 <body>
@@ -66,7 +74,7 @@
     <div class="quest" id="quest"><div class="eyebrow">当前任务 · QUEST</div><div id="questText">找到木门，按 E 打开它</div><div class="quest-track"><i id="questProgress"></i></div></div>
     <div class="world-status"><span id="clockHud">☀ 08:00</span><span id="crystalHud">✦ 星晶 0/3</span></div>
     <canvas id="minimap" width="160" height="160" aria-label="小地图"></canvas>
-    <div class="status"><div class="chip" id="coords">X 12 · Y 1 · Z 23</div><button class="icon-btn" id="soundBtn" title="声音">♪</button><button class="icon-btn" id="resetBtn" title="重新开始">↻</button><button class="icon-btn" id="fullBtn" title="全屏">⛶</button></div>
+    <div class="status"><div class="chip" id="coords">X 12 · Y 1 · Z 23</div><button class="icon-btn" id="craftBtn" title="制作（C）">⚒</button><button class="icon-btn save-dot" id="saveBtn" title="保存进度">◆</button><button class="icon-btn" id="soundBtn" title="声音">♪</button><button class="icon-btn" id="resetBtn" title="重新开始">↻</button><button class="icon-btn" id="fullBtn" title="全屏">⛶</button></div>
     <div id="crosshair"></div>
     <div id="prompt"><kbd>E</kbd><span>打开木门</span></div>
     <div id="toast">🏠 欢迎回家！任务完成</div>
@@ -75,12 +83,25 @@
       <div class="slot" data-type="2"><span class="num">2</span><i class="block-icon" style="background:#b57a43"></i><span class="count">18</span><span class="name">木板</span></div>
       <div class="slot" data-type="3"><span class="num">3</span><i class="block-icon" style="background:#89918d"></i><span class="count">12</span><span class="name">石头</span></div>
       <div class="slot" data-type="4"><span class="num">4</span><i class="block-icon" style="background:#b94f3d"></i><span class="count">10</span><span class="name">砖块</span></div>
+      <div class="slot" data-type="5"><span class="num">5</span><i class="block-icon" style="background:#ffb529"></i><span class="count">0</span><span class="name">灯笼</span></div>
     </div>
   </div>
 
   <div class="touch-ui">
     <div class="dpad"><button class="touch-btn up" data-key="KeyW">▲</button><button class="touch-btn down" data-key="KeyS">▼</button><button class="touch-btn left" data-key="KeyA">◀</button><button class="touch-btn right" data-key="KeyD">▶</button></div>
-    <div class="touch-actions"><button class="touch-btn" id="touchUse">互动</button><button class="touch-btn" id="touchMine">挖掘</button><button class="touch-btn jump" data-key="Space">跳跃</button></div>
+    <div class="touch-actions"><button class="touch-btn" id="touchUse">互动</button><button class="touch-btn" id="touchPlace">放置</button><button class="touch-btn" id="touchMine">挖掘</button><button class="touch-btn jump" data-key="Space">跳跃</button></div>
+  </div>
+
+  <div id="craftPanel" class="hidden">
+    <section class="craft-card">
+      <div class="craft-head"><div><h2>⚒ 方块工坊</h2><p>把收集来的材料制作成更有用的方块。</p></div><button class="close-craft" id="closeCraft" title="关闭">×</button></div>
+      <div id="craftStock">木板 0 · 石头 0 · 砖块 0 · 灯笼 0</div>
+      <div class="recipes">
+        <div class="recipe"><i class="recipe-icon" style="background:#ffb529">✦</i><div><b>温暖灯笼</b><small>木板 ×3 ＋ 石头 ×2 → 灯笼 ×1</small></div><button class="craft-action" data-recipe="lamp">制作</button></div>
+        <div class="recipe"><i class="recipe-icon" style="background:#b94f3d">▦</i><div><b>烧制砖块</b><small>石头 ×3 → 砖块 ×2</small></div><button class="craft-action" data-recipe="brick">制作</button></div>
+      </div>
+      <p class="craft-foot">按 C 或 Esc 返回游戏 · 灯笼会在夜晚照亮周围</p>
+    </section>
   </div>
 
   <div id="intro">
@@ -90,10 +111,10 @@
       <div class="controls">
         <div class="control"><span class="keys">W A S D</span>移动与探索</div>
         <div class="control"><span class="keys">鼠标 · 方向键</span>转动视角</div>
-        <div class="control"><span class="keys">E · 空格</span>互动 · 跳跃</div>
+        <div class="control"><span class="keys">E · C · 空格</span>互动 · 制作 · 跳跃</div>
       </div>
       <button id="start">开始探索 →</button>
-      <p class="tip">左键挖掘并收集 · 右键消耗材料放置 · 数字键 1–4 切换方块<br>若无法锁定鼠标，也可按住画面拖动视角</p>
+      <p class="tip">左键挖掘并收集 · 右键消耗材料放置 · 数字键 1–5 切换方块 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
     </section>
   </div>
 
@@ -225,11 +246,12 @@
     {n:[0,0,-1], v:[[1,0,0],[1,1,0],[0,1,0],[1,0,0],[0,1,0],[0,0,0]]},
     {n:[0,0,1],  v:[[0,0,1],[0,1,1],[1,1,1],[0,0,1],[1,1,1],[1,0,1]]}
   ];
-  let vertexCount=0;
+  let vertexCount=0, lampPositions=[];
   function rebuildMesh(){
-    const data=[];
+    const data=[];lampPositions=[];
     for(const [k,t] of world){
       const [x,y,z]=k.split(',').map(Number);
+      if(t===9)lampPositions.push([x+.5,y+.5,z+.5]);
       faces.forEach((f,fi)=>{
         if(get(x+f.n[0],y+f.n[1],z+f.n[2])) return;
         const c=blockColor(t,fi,x,y,z);
@@ -257,9 +279,9 @@
   // ---------- Player & physics ----------
   const spawn={x:11.5,y:1.01,z:24.5,yaw:0};
   const player={x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,onGround:false,bob:0};
-  const keys={}; let selected=1, started=false, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
+  const keys={}; let selected=1, started=false, paused=false, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
   let questStage=0, crystals=0, worldTime=8, skyLight=1;
-  const stock={1:12,2:18,3:12,4:10};
+  const stock={1:12,2:18,3:12,4:10,5:0};
   const mini=document.getElementById('minimap'), miniCtx=mini.getContext('2d');
   const radius=.28, height=1.72;
   const eye=()=>[player.x,player.y+1.56+(player.onGround?Math.sin(player.bob*2)*.018:0),player.z];
@@ -324,17 +346,17 @@
     chestOpened=true;set(14,1,13,19);rebuildMesh();
     stock[2]+=8;stock[3]+=5;stock[4]+=4;updateInventory();
     questDone=true;questStage=3;document.getElementById('quest').classList.add('done');
-    document.getElementById('questText').textContent='小屋探索完成 · 继续建造或寻找星晶';
+    document.getElementById('questText').textContent=crystals===3?'全部探索完成 · 你是方块世界冒险家！':`主线完成 · 支线：寻找星晶 ${crystals}/3`;
     document.getElementById('questProgress').style.width='100%';
     toast('🎁 宝箱：木板 +8 · 石头 +5 · 砖块 +4');
-    tone(523,.10,'sine');setTimeout(()=>tone(659,.10,'sine'),90);setTimeout(()=>tone(784,.18,'sine'),180);
+    tone(523,.10,'sine');setTimeout(()=>tone(659,.10,'sine'),90);setTimeout(()=>tone(784,.18,'sine'),180);saveGame();
   }
   function useDoor(){
     if(doorDistance()>3.15){toast('再靠近木门一点');return;}
     doorOpen=!doorOpen; set(11,1,15,doorOpen?0:8);set(11,2,15,doorOpen?0:8);rebuildMesh();
     document.querySelector('#prompt span').textContent=doorOpen?'关闭木门':'打开木门';
     if(doorOpen&&questStage<1){questStage=1;document.getElementById('questText').textContent='门开了！走进小屋看看';document.getElementById('questProgress').style.width='42%';toast('门打开了 · 请进！');}
-    tone(doorOpen?280:190,.13,'square');
+    tone(doorOpen?280:190,.13,'square');saveGame();
   }
   function mine(){
     const hit=raycast(); if(!hit)return;
@@ -344,11 +366,12 @@
     if(y<=0){toast('草地要留在脚下');return;}
     if(hit.type===17){
       set(x,y,z,0);crystals=Math.min(3,crystals+1);rebuildMesh();burst('#b56cff');
-      toast(`✦ 找到星晶 ${crystals}/3${crystals===3?' · 全部收集！':''}`);tone(760+crystals*90,.15,'sine');updateHud();return;
+      if(questDone)document.getElementById('questText').textContent=crystals===3?'全部探索完成 · 你是方块世界冒险家！':`主线完成 · 支线：寻找星晶 ${crystals}/3`;
+      toast(`✦ 找到星晶 ${crystals}/3${crystals===3?' · 全部收集！':''}`);tone(760+crystals*90,.15,'sine');updateHud();saveGame();return;
     }
-    const drop=hit.type===3?3:hit.type===4?4:[2,5,8].includes(hit.type)?2:hit.type===1?1:0;
+    const drop=hit.type===9?5:hit.type===3?3:hit.type===4?4:[2,5,8].includes(hit.type)?2:hit.type===1?1:0;
     if(drop)stock[drop]=Math.min(99,stock[drop]+1);
-    set(x,y,z,0);rebuildMesh();updateInventory();burst(drop===2?'#b57a43':drop===3?'#89918d':'#73bd4f');tone(105,.07,'square');
+    set(x,y,z,0);rebuildMesh();updateInventory();burst(drop===2?'#b57a43':drop===3?'#89918d':drop===5?'#ffb529':'#73bd4f');tone(105,.07,'square');saveGame();
   }
   function place(){
     const hit=raycast(); if(!hit||!hit.place)return;
@@ -356,11 +379,27 @@
     if(stock[selected]<=0){toast('这种材料用完了，先去挖一些');return;}
     set(x,y,z,selected);
     if(collides(player.x,player.y,player.z)){set(x,y,z,0);toast('不能放在自己身上');return;}
-    stock[selected]--;rebuildMesh();updateInventory();burst('#ffd45c');tone(145,.05,'square');
+    stock[selected]--;rebuildMesh();updateInventory();burst('#ffd45c');tone(145,.05,'square');saveGame();
   }
   function select(n){ selected=n; document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('active',+s.dataset.type===n)); tone(420+n*40,.035,'sine'); }
   function updateInventory(){document.querySelectorAll('.slot').forEach(s=>s.querySelector('.count').textContent=stock[+s.dataset.type]||0);}
   function burst(color){for(let i=0;i<7;i++){const p=document.createElement('i');p.className='particle';p.style.background=color;p.style.setProperty('--x',`${(Math.random()-.5)*120}px`);p.style.setProperty('--y',`${(Math.random()-.65)*110}px`);document.body.appendChild(p);setTimeout(()=>p.remove(),480);}}
+  const recipes={lamp:{cost:{2:3,3:2},gain:{5:1}},brick:{cost:{3:3},gain:{4:2}}};
+  function canCraft(r){return Object.entries(r.cost).every(([t,n])=>(stock[t]||0)>=n);}
+  function updateCraftUI(){
+    document.getElementById('craftStock').textContent=`木板 ${stock[2]} · 石头 ${stock[3]} · 砖块 ${stock[4]} · 灯笼 ${stock[5]}`;
+    document.querySelectorAll('.craft-action').forEach(b=>b.disabled=!canCraft(recipes[b.dataset.recipe]));
+  }
+  function craft(name){
+    const r=recipes[name];if(!r||!canCraft(r)){toast('材料不够');return;}
+    Object.entries(r.cost).forEach(([t,n])=>stock[t]-=n);Object.entries(r.gain).forEach(([t,n])=>stock[t]=(stock[t]||0)+n);
+    updateInventory();updateCraftUI();burst(name==='lamp'?'#ffbd35':'#c95b48');tone(520,.07,'square');setTimeout(()=>tone(720,.1,'sine'),65);saveGame();
+  }
+  function toggleCraft(force){
+    const panel=document.getElementById('craftPanel'),open=force===undefined?panel.classList.contains('hidden'):force;
+    panel.classList.toggle('hidden',!open);paused=open;Object.keys(keys).forEach(k=>keys[k]=false);
+    if(open){document.exitPointerLock?.();updateCraftUI();}else if(started){canvas.focus();canvas.requestPointerLock?.();}
+  }
 
   // ---------- Rendering ----------
   function resize(){const dpr=Math.min(devicePixelRatio||1,1.75),w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
@@ -378,12 +417,12 @@
     resize();gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
     const e=eye(),d=forwardVector(),center=[e[0]+d[0],e[1]+d[1],e[2]+d[2]];
     const mvp=mul(perspective(Math.PI/3,canvas.width/canvas.height,.06,65),lookAt(e,center,[0,1,0]));
-    gl.uniformMatrix4fv(uMVP,false,mvp);gl.uniform3fv(uEye,e);gl.uniform3fv(uFog,currentFog);gl.uniform1f(uFogNear,18);gl.uniform1f(uFogFar,45);gl.uniform1f(uLight,skyLight);gl.uniform3f(uLamp,12.5,3.4,10.5);
+    gl.uniformMatrix4fv(uMVP,false,mvp);gl.uniform3fv(uEye,e);gl.uniform3fv(uFog,currentFog);gl.uniform1f(uFogNear,18);gl.uniform1f(uFogFar,45);gl.uniform1f(uLight,skyLight);let lp=lampPositions[0]||[999,999,999],ld=Infinity;for(const q of lampPositions){const d=(q[0]-e[0])**2+(q[1]-e[1])**2+(q[2]-e[2])**2;if(d<ld){ld=d;lp=q;}}gl.uniform3fv(uLamp,lp);
     gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);gl.enableVertexAttribArray(aPos);gl.enableVertexAttribArray(aColor);gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(aColor,3,gl.FLOAT,false,24,12);
     gl.drawArrays(gl.TRIANGLES,0,vertexCount);drawTarget(mvp);
   }
   let last=performance.now();
-  function loop(now){const dt=Math.min((now-last)/1000,.045);last=now;if(started)update(dt);render();requestAnimationFrame(loop);} requestAnimationFrame(loop);
+  function loop(now){const dt=Math.min((now-last)/1000,.045);last=now;if(started&&!paused)update(dt);render();requestAnimationFrame(loop);} requestAnimationFrame(loop);
 
   // ---------- UI, input, sound ----------
   const prompt=document.getElementById('prompt'), toastEl=document.getElementById('toast'); let toastTimer;
@@ -417,16 +456,40 @@
     document.querySelector('#prompt span').textContent=nearChest?'打开宝箱':doorOpen?'关闭木门':'打开木门';
     if((mapTick++&3)===0)drawMinimap();
   }
+  const SAVE_KEY='minicraft-cabin-v3';let memorySave=null;
+  function saveGame(notify=false){
+    const data={v:3,world:[...world],player:{x:player.x,y:player.y,z:player.z,yaw:player.yaw,pitch:player.pitch},stock:{...stock},selected,doorOpen,chestOpened,questDone,questStage,crystals,worldTime};
+    const json=JSON.stringify(data);let persistent=true;try{localStorage.setItem(SAVE_KEY,json);}catch(e){memorySave=json;persistent=false;}
+    const b=document.getElementById('saveBtn');b.classList.remove('saved');void b.offsetWidth;b.classList.add('saved');
+    if(notify)toast(persistent?'◆ 冒险进度已保存':'◆ 已保存本次会话 · 下载后可长期保存');
+  }
+  function restoreQuest(){
+    const q=document.getElementById('quest'),text=document.getElementById('questText'),bar=document.getElementById('questProgress');q.classList.toggle('done',questDone);
+    if(questStage===0){text.textContent='找到木门，按 E 打开它';bar.style.width='12%';}
+    else if(questStage===1){text.textContent='门开了！走进小屋看看';bar.style.width='42%';}
+    else if(questStage===2){text.textContent='找到屋内角落的宝箱，按 E 开启';bar.style.width='72%';}
+    else{text.textContent=crystals===3?'全部探索完成 · 你是方块世界冒险家！':`主线完成 · 支线：寻找星晶 ${crystals}/3`;bar.style.width='100%';}
+  }
+  function loadGame(){
+    try{
+      let raw=memorySave;try{raw=localStorage.getItem(SAVE_KEY)||raw;}catch(e){}if(!raw)return false;const d=JSON.parse(raw);if(d.v!==3||!Array.isArray(d.world))return false;
+      world.clear();d.world.forEach(([k,v])=>world.set(k,v));Object.assign(player,d.player||{});Object.assign(stock,d.stock||{});
+      selected=d.selected||1;doorOpen=!!d.doorOpen;chestOpened=!!d.chestOpened;questDone=!!d.questDone;questStage=d.questStage||0;crystals=d.crystals||0;worldTime=d.worldTime??8;
+      rebuildMesh();updateInventory();select(selected);restoreQuest();document.getElementById('start').textContent='继续上次冒险 →';return true;
+    }catch(e){return false;}
+  }
   function toast(text){toastEl.textContent=text;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1800);}
   let audioCtx;
   function tone(freq,dur,type){if(!soundOn)return;try{audioCtx=audioCtx||new (AudioContext||webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(.045,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}}
-  function begin(){started=true;document.getElementById('intro').classList.add('hidden');canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();tone(520,.08,'sine');}
+  function begin(){started=true;paused=false;document.getElementById('intro').classList.add('hidden');canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();tone(520,.08,'sine');}
   document.getElementById('start').addEventListener('click',begin);
   addEventListener('keydown',e=>{
-    keys[e.code]=true;
+    if(e.code==='KeyC'&&!e.repeat){e.preventDefault();toggleCraft();return;}
+    if(e.code==='Escape'&&!document.getElementById('craftPanel').classList.contains('hidden')){toggleCraft(false);return;}
+    if(paused)return;keys[e.code]=true;
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
     if(e.code==='Space'&&!e.repeat)jump(); if(e.code==='KeyE'&&!e.repeat)interact();
-    if(/^Digit[1-4]$/.test(e.code))select(+e.code.slice(5));
+    if(/^Digit[1-5]$/.test(e.code))select(+e.code.slice(5));
   });
   addEventListener('keyup',e=>keys[e.code]=false);
   addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
@@ -443,14 +506,18 @@
     let mx=0,my=0;if(document.pointerLockElement===canvas){mx=e.movementX;my=e.movementY;}else if(dragging){mx=e.clientX-lastMouse[0];my=e.clientY-lastMouse[1];lastMouse=[e.clientX,e.clientY];}
     player.yaw+=mx*.0024;player.pitch=Math.max(-1.42,Math.min(1.42,player.pitch-my*.0021));
   });
-  canvas.addEventListener('wheel',e=>{e.preventDefault();select(selected%4+1);},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();select(selected%5+1);},{passive:false});
   document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>select(+s.dataset.type)));
   function resetGame(){
     Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,bob:0});doorOpen=false;chestOpened=false;questDone=false;questStage=0;crystals=0;worldTime=8;
-    Object.assign(stock,{1:12,2:18,3:12,4:10});buildWorld();rebuildMesh();updateInventory();
-    document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.getElementById('questProgress').style.width='12%';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');
+    Object.assign(stock,{1:12,2:18,3:12,4:10,5:0});selected=1;select(1);buildWorld();rebuildMesh();updateInventory();
+    document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.getElementById('questProgress').style.width='12%';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');saveGame();
   }
   document.getElementById('resetBtn').addEventListener('click',resetGame);
+  document.getElementById('craftBtn').addEventListener('click',()=>toggleCraft(true));
+  document.getElementById('closeCraft').addEventListener('click',()=>toggleCraft(false));
+  document.querySelectorAll('.craft-action').forEach(b=>b.addEventListener('click',()=>craft(b.dataset.recipe)));
+  document.getElementById('saveBtn').addEventListener('click',()=>saveGame(true));
   document.getElementById('soundBtn').addEventListener('click',e=>{soundOn=!soundOn;e.currentTarget.textContent=soundOn?'♪':'×';toast(soundOn?'声音已开启':'声音已关闭');});
   document.getElementById('fullBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
   // Touch controls and swipe look
@@ -460,12 +527,15 @@
   });
   document.getElementById('touchUse').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
   document.getElementById('touchMine').addEventListener('pointerdown',e=>{e.preventDefault();mine();});
+  document.getElementById('touchPlace').addEventListener('pointerdown',e=>{e.preventDefault();place();});
   let touchLook=null;
   canvas.addEventListener('touchstart',e=>{if(!started||e.touches.length!==1)return;touchLook=[e.touches[0].clientX,e.touches[0].clientY];},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(!touchLook||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-touchLook[0],dy=t.clientY-touchLook[1];player.yaw+=dx*.008;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*.006));touchLook=[t.clientX,t.clientY];e.preventDefault();},{passive:false});
   canvas.addEventListener('touchend',()=>touchLook=null);
-  updateInventory();updateSky();drawMinimap();
+  const resumed=loadGame();updateInventory();updateCraftUI();updateSky();drawMinimap();
+  setInterval(()=>{if(started&&!paused)saveGame();},10000);addEventListener('pagehide',()=>{if(started)saveGame();});
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a194ee3bccb8ef9b',t:'MTc4Mzc0MjczNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a194fab63a603222',t:'MTc4Mzc0MzI0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
