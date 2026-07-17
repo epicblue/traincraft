@@ -27,7 +27,7 @@
     .status{position:absolute;right:18px;top:18px;display:flex;gap:8px;pointer-events:auto}
     .world-status{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:7px}
     .world-status span{padding:8px 11px;background:var(--panel);border:2px solid rgba(255,255,255,.22);border-radius:9px;box-shadow:0 4px 0 rgba(10,18,13,.22);font:900 10px system-ui,sans-serif;letter-spacing:.4px}
-    #crystalHud{color:#e8c8ff}#healthHud{color:#ff8a83;letter-spacing:1px}
+    #crystalHud{color:#e8c8ff}#flightHud{color:#bfeaff}#healthHud{color:#ff8a83;letter-spacing:1px}
     #navHud{position:absolute;top:57px;left:50%;transform:translateX(-50%);min-width:205px;padding:7px 12px;border:2px solid rgba(255,255,255,.22);border-radius:9px;background:var(--panel);box-shadow:0 4px 0 rgba(10,18,13,.22);text-align:center;font:900 10px system-ui,sans-serif;letter-spacing:.5px}
     #minimap{position:absolute;right:18px;top:68px;width:146px;height:146px;background:rgba(17,34,24,.78);border:3px solid rgba(255,255,255,.72);border-radius:11px;box-shadow:0 5px 0 rgba(10,18,13,.28);image-rendering:pixelated;pointer-events:auto;cursor:pointer}
     .quest-track{height:5px;margin-top:9px;border-radius:5px;background:rgba(255,255,255,.17);overflow:hidden}.quest-track i{display:block;width:12%;height:100%;background:#ffd45c;transition:.4s}
@@ -104,7 +104,7 @@
   <div id="hud">
     <div class="brand"><div class="cube-logo"><i></i></div><div><b>MINICRAFT</b><small>林间小屋</small></div></div>
     <div class="quest" id="quest"><div class="eyebrow">当前任务 · QUEST</div><div id="questText">找到木门，按 E 打开它</div><div class="quest-track"><i id="questProgress"></i></div></div>
-    <div class="world-status"><span id="clockHud">☀ 08:00</span><span id="crystalHud">✦ 星晶 0/3</span><span id="healthHud">♥♥♥♥♥</span></div>
+    <div class="world-status"><span id="clockHud">☀ 08:00</span><span id="crystalHud">✦ 星晶 0/3</span><span id="healthHud">♥♥♥♥♥</span><span id="flightHud" class="hidden">✈ 飞行</span></div>
     <div id="navHud">N · ↑ 小屋</div>
     <canvas id="minimap" width="160" height="160" aria-label="小地图"></canvas>
     <div class="status"><div class="chip" id="coords">X 12 · Y 1 · Z 23</div><button class="icon-btn" id="cameraBtn" title="切换视角（F5）">◉</button><button class="icon-btn" id="pauseBtn" title="暂停（Esc）">Ⅱ</button><button class="icon-btn" id="craftBtn" title="制作（C）">⚒</button><button class="icon-btn save-dot" id="saveBtn" title="保存进度">◆</button><button class="icon-btn" id="soundBtn" title="声音">♪</button><button class="icon-btn" id="resetBtn" title="重新开始">↻</button><button class="icon-btn" id="fullBtn" title="全屏">⛶</button></div>
@@ -190,8 +190,8 @@
       <div class="travel-row"><button id="travelBtn">白天快速前往</button><button id="openMapBtn">▦ 查看大地图</button><button id="openInventoryBtn">▣ 背包</button><button id="openStoryBtn">📖 故事</button></div>
       <p class="section-label">画面设置</p><div class="settings-row"><button id="qualityBtn">画质：均衡</button><button id="weatherFxBtn">天气粒子：开</button><span class="perf-pill" id="perfText">60 FPS</span></div>
       <p class="section-label">控制与声音</p><div class="control-settings"><label class="setting-slider">鼠标灵敏度 <span id="senseValue">100%</span><input id="senseSlider" type="range" min="50" max="200" value="100"></label><label class="setting-slider">视野范围 <span id="fovValue">60°</span><input id="fovSlider" type="range" min="55" max="90" value="60"></label><label class="setting-slider">声音音量 <span id="volumeValue">100%</span><input id="volumeSlider" type="range" min="0" max="100" value="100"></label></div>
-      <div class="pause-help">WASD 移动 · Shift 疾跑 · E 互动 · C 制作 · I 背包 · B 装修 · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图 · 空格跳跃<br>按住左键挖掘／点击攻击 · 右键放置 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9 切换</div>
-      <div class="pause-actions"><button class="resume" id="resumeBtn">继续冒险 →</button><button id="pauseSaveBtn">◆ 保存进度</button><button id="modeBtn">☠ 夜间生物：开</button><button id="pauseUndoBtn">↶ 撤销建造</button><button class="danger" id="pauseResetBtn">↻ 新建世界</button></div>
+      <div class="pause-help">WASD 移动 · Shift 疾跑／飞行下降 · F 飞行 · E 互动 · C 制作 · I 背包 · B 装修 · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图 · 空格跳跃<br>按住左键挖掘／点击攻击 · 右键放置 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9 切换</div>
+      <div class="pause-actions"><button class="resume" id="resumeBtn">继续冒险 →</button><button id="pauseSaveBtn">◆ 保存进度</button><button id="modeBtn">☠ 夜间生物：开</button><button id="flightBtn">✈ 飞行模式：关</button><button id="pauseUndoBtn">↶ 撤销建造</button><button class="danger" id="pauseResetBtn">↻ 新建世界</button></div>
       <div class="save-tools"><button id="exportSaveBtn">⇩ 导出存档备份</button><button id="importSaveBtn">⇧ 导入存档备份</button></div><input id="importSaveInput" type="file" accept="application/json,.json" hidden><div id="pauseSaveState"></div>
     </section>
   </div>
@@ -224,7 +224,7 @@
         <div class="control"><span class="keys">E · C · 空格</span>互动 · 制作 · 跳跃</div>
       </div>
       <button id="start">开始探索 →</button>
-      <p class="tip">按住左键挖掘／点击攻击 · 右键消耗材料放置 · 中键取样 · 数字键 1–9 切换物品 · 默认第三人称 · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
+      <p class="tip">按住左键挖掘／点击攻击 · 右键消耗材料放置 · 中键取样 · 数字键 1–9 切换物品 · 默认第三人称 · F 飞行 · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
     </section>
   </div>
 
@@ -548,7 +548,7 @@
     {shirt:[.25,.28,.27],pants:[.12,.15,.18],cape:[.48,.52,.48]}
   ];
   const stats={mined:0,placed:0,crafted:0,sleeps:0,slimes:0,fish:0},achievements=new Set(),storyUnlocked=new Set();let storyPage=0,storyQueue=[];
-  let health=5,damageCooldown=0,attackCooldown=0,adventureMode=false,hasPickaxe=false,mobNightState=false,fishingState=0,fishingTimer=0,fishingSpot=0;
+  let health=5,damageCooldown=0,attackCooldown=0,flying=false,adventureMode=false,hasPickaxe=false,mobNightState=false,fishingState=0,fishingTimer=0,fishingSpot=0;
   const slimes=[
     {x:24.5,z:23.5,sx:24.5,sz:23.5,hp:3,alive:true,bounce:0,hurt:0},
     {x:5.5,z:16.5,sx:5.5,sz:16.5,hp:3,alive:true,bounce:1.7,hurt:0},
@@ -587,20 +587,12 @@
     if(keys.ArrowLeft) player.yaw-=1.75*dt; if(keys.ArrowRight) player.yaw+=1.75*dt;
     const len=Math.hypot(forward,side)||1; forward/=len;side/=len;
     const moving=Math.abs(forward)+Math.abs(side)>.01;
-    const sprinting=!!(keys.ShiftLeft||keys.ShiftRight),speed=sprinting?5.0:3.25;
-    const targetFov=baseFov*Math.PI/180*(sprinting&&moving?1.12:1);cameraFov+=(targetFov-cameraFov)*Math.min(1,dt*7);
-    const dx=(Math.sin(player.yaw)*forward+Math.cos(player.yaw)*side)*speed*dt;
-    const dz=(-Math.cos(player.yaw)*forward+Math.sin(player.yaw)*side)*speed*dt;
-    if(!collides(player.x+dx,player.y,player.z)) player.x+=dx;
-    if(!collides(player.x,player.y,player.z+dz)) player.z+=dz;
-    if(moving&&player.onGround){
-      player.bob+=dt*(speed>4?8:6);stepClock-=dt;
-      if(stepClock<=0){playFootstep();stepClock=sprinting?.28:.43;}
-    }else stepClock=0;
-    player.vy-=18*dt;
-    let ny=player.y+player.vy*dt;
-    if(!collides(player.x,ny,player.z)){player.y=ny;player.onGround=false;}
-    else { if(player.vy<0) player.onGround=true; player.vy=0; }
+    const shift=!!(keys.ShiftLeft||keys.ShiftRight),boost=flying&&!!(keys.ControlLeft||keys.ControlRight),sprinting=!flying&&shift,speed=flying?(boost?8:5):sprinting?5.0:3.25;
+    const targetFov=baseFov*Math.PI/180*((sprinting&&moving)||boost?1.12:1);cameraFov+=(targetFov-cameraFov)*Math.min(1,dt*7);
+    const dx=(Math.sin(player.yaw)*forward+Math.cos(player.yaw)*side)*speed*dt,dz=(-Math.cos(player.yaw)*forward+Math.sin(player.yaw)*side)*speed*dt;
+    if(!collides(player.x+dx,player.y,player.z))player.x+=dx;if(!collides(player.x,player.y,player.z+dz))player.z+=dz;
+    if(flying){const vertical=(keys.Space?1:0)-((shift||keys.FlyDown)?1:0),dy=vertical*(boost?7:4.2)*dt,ny=player.y+dy;if(dy&&ny>.65&&ny<24&&!collides(player.x,ny,player.z))player.y=ny;player.vy=0;player.onGround=false;stepClock=0;}
+    else {if(moving&&player.onGround){player.bob+=dt*(speed>4?8:6);stepClock-=dt;if(stepClock<=0){playFootstep();stepClock=sprinting?.28:.43;}}else stepClock=0;player.vy-=18*dt;const ny=player.y+player.vy*dt;if(!collides(player.x,ny,player.z)){player.y=ny;player.onGround=false;}else{if(player.vy<0)player.onGround=true;player.vy=0;}}
     if(player.y<.5) resetGame();
     updateSlimes(dt);updateCat(dt);updateFishing(dt);updateGarden(dt);updateMining(dt);
     const inHouse=isInHouse();
@@ -614,7 +606,9 @@
     if(isInIgloo()&&!iglooFound){iglooFound=true;toast('发现北境雪原冰屋');tone(700,.12,'sine');laterUnlock('igloo','极地访客',900);unlockStory(7,true);updateEndQuestText();saveGame();}
     updateSky(); updateHud();
   }
-  function jump(){if(player.onGround){player.vy=6.5;player.onGround=false;tone(170,.06,'square');}}
+  function toggleFlight(){stopMining();flying=!flying;player.vy=0;player.onGround=false;keys.FlyDown=false;document.getElementById('touchUse').textContent=flying?'下降':'互动';updateFlightUI();toast(flying?'飞行模式已开启 · 空格上升，Shift下降，Ctrl加速':'飞行模式已关闭');tone(flying?640:380,.08,'sine');saveGame();}
+  function updateFlightUI(){document.getElementById('flightHud').classList.toggle('hidden',!flying);document.getElementById('flightBtn').textContent=flying?'✈ 飞行模式：开':'✈ 飞行模式：关';const b=document.getElementById('touchUse');if(b)b.textContent=flying?'下降':'互动';}
+  function jump(){if(flying)return;if(player.onGround){player.vy=6.5;player.onGround=false;tone(170,.06,'square');}}
   function playFootstep(){
     const ix=Math.floor(player.x),iz=Math.floor(player.z),iy=Math.floor(player.y+.01),t=get(ix,iy,iz)||get(ix,iy-1,iz),r=Math.random()*10;if(t===2||t===24||t===25||t===27||t===29)tone(118+r,.028,'square',.010);else if(t===3||t===4||t===20||t===26)tone(66+r,.035,'square',.012);else if(t===22)tone(52+r,.04,'sine',.010);else if(t===21)tone(42+r,.045,'sine',.008);else if(t===18)tone(150+r,.035,'sine',.012);else tone(78+r,.03,'triangle',.008);
   }
@@ -658,7 +652,7 @@
     if(health<=0){paused=true;setTimeout(respawnPlayer,500);}
   }
   function respawnPlayer(){
-    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,vy:0,yaw:spawn.yaw,pitch:-.06});health=5;worldTime=7;raining=false;weatherTimer=40;damageCooldown=2;
+    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,vy:0,yaw:spawn.yaw,pitch:-.06});flying=false;updateFlightUI();health=5;worldTime=7;raining=false;weatherTimer=40;damageCooldown=2;
     slimes.forEach(s=>{s.alive=true;s.hp=3;s.x=s.sx;s.z=s.sz;});paused=false;toast('你在清晨的营地重新醒来');tone(420,.13,'sine');saveGame();
   }
   function attackSlime(){
@@ -760,7 +754,7 @@
     toast('这里没有可互动的东西');
   }
   function useBed(){
-    if(!nearSleepSpot())return;const night=worldTime>=18.5||worldTime<6.2;
+    if(!nearSleepSpot())return;if(flying)toggleFlight();const night=worldTime>=18.5||worldTime<6.2;
     if(!night){toast('☀ 天还亮着，晚上再来睡吧');return;}
     paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('sleepFade').classList.add('asleep');tone(330,.18,'sine',.025);
     setTimeout(()=>{worldTime=7;dayCount++;rebuildMesh();raining=false;weatherTimer=45;health=5;updateHud();updateSky();saveGame();},650);
@@ -982,7 +976,7 @@
   function updatePauseUI(){
     document.getElementById('statMined').textContent=stats.mined;document.getElementById('statPlaced').textContent=stats.placed;
     document.getElementById('statCrafted').textContent=stats.crafted;document.getElementById('statSleeps').textContent=stats.sleeps;document.getElementById('statSlimes').textContent=stats.slimes;document.getElementById('statFish').textContent=stats.fish;
-    document.querySelectorAll('.ach').forEach(a=>a.classList.toggle('unlocked',achievements.has(a.dataset.ach)));document.querySelectorAll('.avatar-swatch').forEach(b=>b.classList.toggle('selected',+b.dataset.style===avatarStyle));document.getElementById('shoulderBtn').textContent=cameraShoulder>0?'肩位：右侧':'肩位：左侧';document.getElementById('qualityBtn').textContent=`画质：${['流畅','均衡','精美'][graphicsMode]}`;document.getElementById('weatherFxBtn').textContent=`天气粒子：${weatherFx?'开':'关'}`;syncControlSettings();document.querySelectorAll('.waypoint-btn').forEach(b=>{const unlocked=landmarkUnlocked(b.dataset.waypoint);b.classList.toggle('selected',b.dataset.waypoint===waypoint);b.querySelector('small').textContent=unlocked?'已发现':'未发现';});const travel=document.getElementById('travelBtn'),travelReady=landmarkUnlocked(waypoint)&&worldTime>=6&&worldTime<18.5;travel.disabled=!travelReady;travel.textContent=!landmarkUnlocked(waypoint)?'尚未发现，无法快速旅行':worldTime<6||worldTime>=18.5?'夜间无法快速旅行':'白天快速前往';document.getElementById('modeBtn').textContent=adventureMode?'☠ 夜间生物：开':'☘ 和平模式：开';document.getElementById('pauseUndoBtn').disabled=!buildHistory.length;
+    document.querySelectorAll('.ach').forEach(a=>a.classList.toggle('unlocked',achievements.has(a.dataset.ach)));document.querySelectorAll('.avatar-swatch').forEach(b=>b.classList.toggle('selected',+b.dataset.style===avatarStyle));document.getElementById('shoulderBtn').textContent=cameraShoulder>0?'肩位：右侧':'肩位：左侧';document.getElementById('qualityBtn').textContent=`画质：${['流畅','均衡','精美'][graphicsMode]}`;document.getElementById('weatherFxBtn').textContent=`天气粒子：${weatherFx?'开':'关'}`;syncControlSettings();document.querySelectorAll('.waypoint-btn').forEach(b=>{const unlocked=landmarkUnlocked(b.dataset.waypoint);b.classList.toggle('selected',b.dataset.waypoint===waypoint);b.querySelector('small').textContent=unlocked?'已发现':'未发现';});const travel=document.getElementById('travelBtn'),travelReady=landmarkUnlocked(waypoint)&&worldTime>=6&&worldTime<18.5;travel.disabled=!travelReady;travel.textContent=!landmarkUnlocked(waypoint)?'尚未发现，无法快速旅行':worldTime<6||worldTime>=18.5?'夜间无法快速旅行':'白天快速前往';document.getElementById('modeBtn').textContent=adventureMode?'☠ 夜间生物：开':'☘ 和平模式：开';updateFlightUI();document.getElementById('pauseUndoBtn').disabled=!buildHistory.length;
   }
   function openPause(){
     stopMining();if(!started||document.getElementById('sleepFade').classList.contains('asleep'))return;paused=true;Object.keys(keys).forEach(k=>keys[k]=false);
@@ -1193,7 +1187,7 @@
   }
   const SAVE_KEY='minicraft-cabin-v3';let memorySave=null;
   function saveGame(notify=false){
-    const data={v:3,worldVersion:9,world:[...world],decorations:decorations.map(d=>({...d})),decorFloorThemes:[...decorFloorThemes],decorWallThemes:[...decorWallThemes],savedDecorLayout,buildHistory:buildHistory.slice(-40),chestStock:{...chestStock},player:{x:player.x,y:player.y,z:player.z,yaw:player.yaw,pitch:player.pitch},stock:{...stock},stats:{...stats},achievements:[...achievements],storyUnlocked:[...storyUnlocked],storyPage,health,adventureMode,creatureDefaultVersion:1,woodGrantVersion:1,allItemsGrantVersion:2,hasPickaxe,cameraMode,cameraDistance,cameraShoulder,cameraDefaultVersion:1,miniMode,graphicsMode,weatherFx,baseFov,mouseSensitivity,masterVolume,avatarStyle,waypoint,cat:{x:cat.x,z:cat.z,yaw:cat.yaw,befriended:cat.befriended,mode:cat.mode,affection:cat.affection,stayX:cat.stayX,stayZ:cat.stayZ,giftDay:cat.giftDay},slimeState:slimes.map(s=>({x:s.x,z:s.z,hp:s.hp,alive:s.alive})),placedDoors:placedDoors.map(d=>({x:d.x,y:d.y,z:d.z,open:d.open})),selected,doorOpen,mainDoorExists,chestOpened,questDone,questStage,crystals,worldTime,dayCount,mailDay,raining,weatherTimer,sheepMet,caveFound,campFound,iglooFound,fireplaceOn,gardenReady,gardenTimer,bookRead,loftVisited};
+    const data={v:3,worldVersion:9,world:[...world],decorations:decorations.map(d=>({...d})),decorFloorThemes:[...decorFloorThemes],decorWallThemes:[...decorWallThemes],savedDecorLayout,buildHistory:buildHistory.slice(-40),chestStock:{...chestStock},player:{x:player.x,y:player.y,z:player.z,yaw:player.yaw,pitch:player.pitch},stock:{...stock},stats:{...stats},achievements:[...achievements],storyUnlocked:[...storyUnlocked],storyPage,health,flying,adventureMode,creatureDefaultVersion:1,woodGrantVersion:1,allItemsGrantVersion:2,hasPickaxe,cameraMode,cameraDistance,cameraShoulder,cameraDefaultVersion:1,miniMode,graphicsMode,weatherFx,baseFov,mouseSensitivity,masterVolume,avatarStyle,waypoint,cat:{x:cat.x,z:cat.z,yaw:cat.yaw,befriended:cat.befriended,mode:cat.mode,affection:cat.affection,stayX:cat.stayX,stayZ:cat.stayZ,giftDay:cat.giftDay},slimeState:slimes.map(s=>({x:s.x,z:s.z,hp:s.hp,alive:s.alive})),placedDoors:placedDoors.map(d=>({x:d.x,y:d.y,z:d.z,open:d.open})),selected,doorOpen,mainDoorExists,chestOpened,questDone,questStage,crystals,worldTime,dayCount,mailDay,raining,weatherTimer,sheepMet,caveFound,campFound,iglooFound,fireplaceOn,gardenReady,gardenTimer,bookRead,loftVisited};
     const json=JSON.stringify(data);let persistent=true;try{localStorage.setItem(SAVE_KEY,json);}catch(e){memorySave=json;persistent=false;}
     const b=document.getElementById('saveBtn');b.classList.remove('saved');void b.offsetWidth;b.classList.add('saved');
     if(notify)toast(persistent?'◆ 冒险进度已保存':'◆ 已保存本次会话 · 下载后可长期保存');return json;
@@ -1209,7 +1203,7 @@
     try{
       let raw=rawOverride||memorySave;if(!rawOverride)try{raw=localStorage.getItem(SAVE_KEY)||raw;}catch(e){}if(!raw)return false;const d=JSON.parse(raw);if(d.v!==3||!Array.isArray(d.world))return false;
       world.clear();d.world.forEach(([k,v])=>world.set(k,v));if(!d.worldVersion||d.worldVersion<2)buildCave();if(!d.worldVersion||d.worldVersion<3)buildExpansion(true);if(!d.worldVersion||d.worldVersion<4)buildFarlands(true);if(!d.worldVersion||d.worldVersion<5)buildHouseDetails();if(!d.worldVersion||d.worldVersion<6)buildLargeHouse(true);if(!d.worldVersion||d.worldVersion<7)buildLoft();if(!d.worldVersion||d.worldVersion<8)buildCatCorner();if(!d.worldVersion||d.worldVersion<9)buildMailbox();decorations.length=0;decorUndo.length=0;decorRedo.length=0;savedDecorLayout=typeof d.savedDecorLayout==='string'?d.savedDecorLayout:null;decorFloorThemes=Array.isArray(d.decorFloorThemes)?[Math.max(0,Math.min(decorThemeNames.length-1,d.decorFloorThemes[0]||0)),Math.max(0,Math.min(decorThemeNames.length-1,d.decorFloorThemes[1]||0))]:[0,0];decorWallThemes=Array.isArray(d.decorWallThemes)?[Math.max(0,Math.min(decorWallThemeNames.length-1,d.decorWallThemes[0]||0)),Math.max(0,Math.min(decorWallThemeNames.length-1,d.decorWallThemes[1]||0))]:[0,0];if(Array.isArray(d.decorations))for(const v of d.decorations.slice(0,60))if(v&&decorDefs[v.type]&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z)){decorations.push({id:Number.isFinite(v.id)?v.id:nextDecorId++,type:v.type,x:v.x,y:v.y,z:v.z,rot:((v.rot||0)%8+8)%8,color:Math.max(0,Math.min(decorColors.length-1,v.color||0)),scale:[.75,1,1.25,1.5].includes(v.scale)?v.scale:1,ox:Math.max(-.4,Math.min(.4,Number(v.ox)||0)),oz:Math.max(-.4,Math.min(.4,Number(v.oz)||0)),elev:Math.max(0,Math.min(3,Number(v.elev)||0))});}nextDecorId=Math.max(1,...decorations.map(v=>v.id+1));Object.assign(player,d.player||{});Object.assign(stock,d.stock||{});if(d.woodGrantVersion!==1)stock[2]=Math.max(1000,stock[2]||0);if(d.allItemsGrantVersion!==2)for(const t of Object.keys(itemDefs))stock[t]=Math.max(1000,stock[t]||0);Object.assign(chestStock,d.chestStock||{});buildHistory.length=0;if(Array.isArray(d.buildHistory))d.buildHistory.slice(-40).forEach(b=>{if(b&&Number.isFinite(b.x)&&Number.isFinite(b.y)&&Number.isFinite(b.z))buildHistory.push(b);});Object.assign(stats,d.stats||{});
-      achievements.clear();(d.achievements||[]).forEach(a=>achievements.add(a));storyUnlocked.clear();(d.storyUnlocked||[]).forEach(id=>{if(Number.isInteger(id)&&storyEntries[id])storyUnlocked.add(id);});storyPage=Number.isInteger(d.storyPage)&&storyEntries[d.storyPage]?d.storyPage:0;storyQueue=[];health=Math.max(1,Math.min(5,d.health||5));adventureMode=d.creatureDefaultVersion===1?d.adventureMode===true:false;hasPickaxe=!!d.hasPickaxe;cameraMode=d.cameraDefaultVersion===1?Math.max(0,Math.min(2,d.cameraMode??1)):1;cameraDistance=Math.max(2.2,Math.min(6,d.cameraDistance||4));cameraShoulder=d.cameraShoulder===-1?-1:1;miniMode=d.miniMode===1?1:0;graphicsMode=Math.max(0,Math.min(2,d.graphicsMode??1));weatherFx=d.weatherFx!==false;baseFov=Math.max(55,Math.min(90,d.baseFov||60));mouseSensitivity=Math.max(.5,Math.min(2,d.mouseSensitivity||1));masterVolume=Math.max(0,Math.min(1,d.masterVolume??1));applyGraphics();cameraActual=null;avatarStyle=Math.max(0,Math.min(avatarStyles.length-1,d.avatarStyle||0));waypoint=landmarks[d.waypoint]?d.waypoint:'house';
+      achievements.clear();(d.achievements||[]).forEach(a=>achievements.add(a));storyUnlocked.clear();(d.storyUnlocked||[]).forEach(id=>{if(Number.isInteger(id)&&storyEntries[id])storyUnlocked.add(id);});storyPage=Number.isInteger(d.storyPage)&&storyEntries[d.storyPage]?d.storyPage:0;storyQueue=[];health=Math.max(1,Math.min(5,d.health||5));flying=!!d.flying;adventureMode=d.creatureDefaultVersion===1?d.adventureMode===true:false;hasPickaxe=!!d.hasPickaxe;cameraMode=d.cameraDefaultVersion===1?Math.max(0,Math.min(2,d.cameraMode??1)):1;cameraDistance=Math.max(2.2,Math.min(6,d.cameraDistance||4));cameraShoulder=d.cameraShoulder===-1?-1:1;miniMode=d.miniMode===1?1:0;graphicsMode=Math.max(0,Math.min(2,d.graphicsMode??1));weatherFx=d.weatherFx!==false;baseFov=Math.max(55,Math.min(90,d.baseFov||60));mouseSensitivity=Math.max(.5,Math.min(2,d.mouseSensitivity||1));masterVolume=Math.max(0,Math.min(1,d.masterVolume??1));applyGraphics();cameraActual=null;avatarStyle=Math.max(0,Math.min(avatarStyles.length-1,d.avatarStyle||0));waypoint=landmarks[d.waypoint]?d.waypoint:'house';
       if(d.cat){cat.x=Number.isFinite(d.cat.x)?d.cat.x:8.4;cat.z=Number.isFinite(d.cat.z)?d.cat.z:18.7;cat.yaw=d.cat.yaw||0;cat.befriended=!!d.cat.befriended;cat.mode=['follow','stay','home'].includes(d.cat.mode)?d.cat.mode:'follow';cat.affection=Math.max(0,Math.min(5,d.cat.affection||0));cat.stayX=Number.isFinite(d.cat.stayX)?d.cat.stayX:cat.x;cat.stayZ=Number.isFinite(d.cat.stayZ)?d.cat.stayZ:cat.z;cat.giftDay=Number.isFinite(d.cat.giftDay)?d.cat.giftDay:-1;cat.pose='sit';cat.petCooldown=0;cat.playTimer=0;}if(Array.isArray(d.slimeState))d.slimeState.forEach((v,i)=>{if(slimes[i])Object.assign(slimes[i],v);});
       syncPlacedDoors(Array.isArray(d.placedDoors)?d.placedDoors:[]);selected=d.selected||1;doorOpen=!!d.doorOpen;mainDoorExists=d.mainDoorExists!==false;chestOpened=!!d.chestOpened;questDone=!!d.questDone;questStage=d.questStage||0;crystals=d.crystals||0;worldTime=d.worldTime??8;dayCount=Math.max(0,d.dayCount||0);mailDay=Number.isFinite(d.mailDay)?d.mailDay:-1;raining=!!d.raining;weatherTimer=d.weatherTimer??22;sheepMet=!!d.sheepMet;caveFound=!!d.caveFound;campFound=!!d.campFound;iglooFound=!!d.iglooFound;fireplaceOn=d.fireplaceOn!==false;gardenReady=d.gardenReady!==false;gardenTimer=Math.max(0,d.gardenTimer||0);bookRead=!!d.bookRead;loftVisited=!!d.loftVisited;doorAngle=doorOpen?-Math.PI/2:0;
       set(11,1,15,mainDoorExists&&!doorOpen?8:0);set(11,2,15,mainDoorExists&&!doorOpen?8:0);set(14,1,13,chestOpened?19:16);
@@ -1244,6 +1238,7 @@
     if(e.code==='KeyC'&&craftOpen&&!e.repeat){e.preventDefault();toggleCraft(false);return;}
     if(decorOpen){if(e.code==='KeyR'){e.preventDefault();document.getElementById('decorRotateBtn').click();}else if(e.code==='Delete'||e.code==='Backspace'){e.preventDefault();document.getElementById('decorRemoveBtn').click();}else if(e.code==='KeyD'&&(e.ctrlKey||e.metaKey)){e.preventDefault();duplicateDecor();}else if(e.code==='KeyZ'&&(e.ctrlKey||e.metaKey)){e.preventDefault();undoDecor();}else if(e.code==='KeyY'&&(e.ctrlKey||e.metaKey)){e.preventDefault();redoDecor();}else if(e.code==='ArrowUp'){e.preventDefault();nudgeDecor(0,-.1);}else if(e.code==='ArrowDown'){e.preventDefault();nudgeDecor(0,.1);}else if(e.code==='ArrowLeft'){e.preventDefault();nudgeDecor(-.1,0);}else if(e.code==='ArrowRight'){e.preventDefault();nudgeDecor(.1,0);}else if(e.code==='PageUp'){e.preventDefault();elevateDecor(.1);}else if(e.code==='PageDown'){e.preventDefault();elevateDecor(-.1);}return;}
     if(decorOpen||mailOpen||storyOpen||inventoryOpen||catOpen||storageOpen||mapOpen||pauseOpen||craftOpen)return;
+    if(e.code==='KeyF'&&!e.repeat){e.preventDefault();toggleFlight();return;}
     if(e.code==='KeyN'&&!e.repeat){e.preventDefault();toggleMinimap();return;}
     if(e.code==='KeyZ'&&!e.repeat){e.preventDefault();undoBuild();return;}
     if(e.code==='KeyV'&&!e.repeat){e.preventDefault();toggleShoulder();return;}
@@ -1275,7 +1270,7 @@
   mini.addEventListener('click',toggleMinimap);
   function resetGame(){
     worldGeneration++;Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,bob:0});doorOpen=false;mainDoorExists=true;chestOpened=false;questDone=false;questStage=0;crystals=0;worldTime=8;dayCount=0;mailDay=-1;raining=false;weatherTimer=22;sheepMet=false;caveFound=false;campFound=false;iglooFound=false;fireplaceOn=true;gardenReady=true;gardenTimer=0;bookRead=false;bookTipIndex=0;loftVisited=false;waypoint='house';miniMode=0;avatarStyle=0;emoteTimer=0;actionTimer=0;cameraFov=Math.PI/3;baseFov=60;mouseSensitivity=1;masterVolume=1;cameraMode=1;cameraDistance=4;cameraShoulder=1;graphicsMode=1;weatherFx=true;applyGraphics();thirdCameraDistance=4;cameraActual=null;doorAngle=0;
-    placedDoors.length=0;decorations.length=0;decorUndo.length=0;decorRedo.length=0;savedDecorLayout=null;decorFloorThemes=[0,0];decorWallThemes=[0,0];nextDecorId=1;Object.assign(stock,{1:1000,2:1000,3:1000,4:1000,5:1000,6:1000,7:1000,8:1000,31:1000,32:1000,34:1000});Object.assign(chestStock,{1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,31:0,32:0,34:0});buildHistory.length=0;Object.assign(stats,{mined:0,placed:0,crafted:0,sleeps:0,slimes:0,fish:0});achievements.clear();storyUnlocked.clear();storyPage=0;storyQueue=[];health=5;damageCooldown=0;attackCooldown=0;adventureMode=false;hasPickaxe=false;fishingState=0;fishingTimer=0;fishingSpot=0;Object.assign(cat,{x:8.4,z:18.7,y:1.01,yaw:0,befriended:false,mode:'follow',affection:0,stayX:8.4,stayZ:18.7,wander:0,pose:'sit',petCooldown:0,playTimer:0,yarnX:8.4,yarnZ:18.7,yarnCurrentX:8.4,yarnCurrentZ:18.7,giftDay:-1});slimes.forEach(s=>{s.x=s.sx;s.z=s.sz;s.hp=3;s.alive=true;s.hurt=0;});mobNightState=false;updatePauseUI();selected=1;select(1);buildWorld();rebuildMesh();updateInventory();
+    placedDoors.length=0;decorations.length=0;decorUndo.length=0;decorRedo.length=0;savedDecorLayout=null;decorFloorThemes=[0,0];decorWallThemes=[0,0];nextDecorId=1;Object.assign(stock,{1:1000,2:1000,3:1000,4:1000,5:1000,6:1000,7:1000,8:1000,31:1000,32:1000,34:1000});Object.assign(chestStock,{1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,31:0,32:0,34:0});buildHistory.length=0;Object.assign(stats,{mined:0,placed:0,crafted:0,sleeps:0,slimes:0,fish:0});achievements.clear();storyUnlocked.clear();storyPage=0;storyQueue=[];health=5;flying=false;damageCooldown=0;attackCooldown=0;adventureMode=false;hasPickaxe=false;fishingState=0;fishingTimer=0;fishingSpot=0;Object.assign(cat,{x:8.4,z:18.7,y:1.01,yaw:0,befriended:false,mode:'follow',affection:0,stayX:8.4,stayZ:18.7,wander:0,pose:'sit',petCooldown:0,playTimer:0,yarnX:8.4,yarnZ:18.7,yarnCurrentX:8.4,yarnCurrentZ:18.7,giftDay:-1});slimes.forEach(s=>{s.x=s.sx;s.z=s.sz;s.hp=3;s.alive=true;s.hurt=0;});mobNightState=false;updatePauseUI();selected=1;select(1);buildWorld();rebuildMesh();updateInventory();
     document.getElementById('cameraBtn').textContent='◉';document.getElementById('crosshair').style.opacity='1';document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.getElementById('questProgress').style.width='12%';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');saveGame();if(started)setTimeout(()=>unlockStory(0,true),180);
   }
   document.getElementById('resetBtn').addEventListener('click',resetGame);
@@ -1323,6 +1318,7 @@
   for(const id of ['senseSlider','fovSlider','volumeSlider']){document.getElementById(id).addEventListener('input',readControlSettings);document.getElementById(id).addEventListener('change',()=>{readControlSettings();saveGame();});}
   document.getElementById('qualityBtn').addEventListener('click',cycleGraphics);
   document.getElementById('weatherFxBtn').addEventListener('click',toggleWeatherFx);
+  document.getElementById('flightBtn').addEventListener('click',toggleFlight);
   document.getElementById('modeBtn').addEventListener('click',()=>{adventureMode=!adventureMode;health=5;updatePauseUI();updateHud();saveGame();});
   document.getElementById('pauseUndoBtn').addEventListener('click',()=>{undoBuild();updatePauseUI();document.getElementById('pauseSaveState').textContent='已尝试撤销上一次建造';});
   document.getElementById('exportSaveBtn').addEventListener('click',exportSave);
@@ -1353,7 +1349,9 @@
     const code=b.dataset.key;const on=e=>{e.preventDefault();keys[code]=true;if(code==='Space')jump();};const off=e=>{e.preventDefault();keys[code]=false;};
     b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
   });
-  document.getElementById('touchUse').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
+  document.getElementById('touchUse').addEventListener('pointerdown',e=>{e.preventDefault();if(flying)keys.FlyDown=true;else interact();});
+  document.getElementById('touchUse').addEventListener('pointerup',e=>{e.preventDefault();keys.FlyDown=false;});
+  document.getElementById('touchUse').addEventListener('pointercancel',()=>keys.FlyDown=false);
   document.getElementById('touchMine').addEventListener('pointerdown',e=>{e.preventDefault();beginMining();});
   document.getElementById('touchMine').addEventListener('pointerup',e=>{e.preventDefault();stopMining();});
   document.getElementById('touchMine').addEventListener('pointercancel',stopMining);
@@ -1363,9 +1361,9 @@
   canvas.addEventListener('touchstart',e=>{if(!started)return;if(e.touches.length===2&&cameraMode){pinchDistance=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchCamera=cameraDistance;touchLook=null;}else if(e.touches.length===1)touchLook=[e.touches[0].clientX,e.touches[0].clientY];},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&cameraMode&&pinchDistance){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);cameraDistance=Math.max(2.2,Math.min(6,pinchCamera+(pinchDistance-d)*.012));e.preventDefault();return;}if(!touchLook||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-touchLook[0],dy=t.clientY-touchLook[1];player.yaw+=dx*.008*mouseSensitivity;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*.006*mouseSensitivity));touchLook=[t.clientX,t.clientY];e.preventDefault();},{passive:false});
   canvas.addEventListener('touchend',e=>{touchLook=null;if(e.touches.length<2&&pinchDistance){pinchDistance=0;saveGame();}});
-  applyGraphics();const resumed=loadGame();document.getElementById('cameraBtn').textContent=['◎','◉','◍'][cameraMode];document.getElementById('crosshair').style.opacity=cameraMode===2?'0':'1';updateInventory();updateHeldItem();updateCraftUI();updateStorageUI();updatePauseUI();updateSky();updateHud();drawMinimap();
+  applyGraphics();const resumed=loadGame();document.getElementById('cameraBtn').textContent=['◎','◉','◍'][cameraMode];document.getElementById('crosshair').style.opacity=cameraMode===2?'0':'1';updateFlightUI();document.getElementById('touchUse').textContent=flying?'下降':'互动';updateInventory();updateHeldItem();updateCraftUI();updateStorageUI();updatePauseUI();updateSky();updateHud();drawMinimap();
   setInterval(()=>{if(started&&!paused)saveGame();},10000);addEventListener('pagehide',()=>{if(started)saveGame();});
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1c9a735ab70c67f',t:'MTc4NDI5NTU3MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1c9ab312eb4c67f',t:'MTc4NDI5NTczMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
