@@ -10,6 +10,7 @@
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#9edcff;color:white;font-family:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",monospace}
     body{background:linear-gradient(#71c8f4 0%,#bceaff 62%,#eaf8dc 100%);transition:background .8s linear}
     #game{position:fixed;inset:0;z-index:1;width:100%;height:100%;display:block;cursor:crosshair;outline:none}
+    #weatherCanvas{position:fixed;inset:0;z-index:2;width:100%;height:100%;pointer-events:none}
     .hidden{display:none!important}
     #skyOrb{position:fixed;z-index:0;width:72px;height:72px;border-radius:50%;left:18%;top:13%;background:#ffe98b;box-shadow:0 0 35px rgba(255,235,135,.75);pointer-events:none;transition:background .5s,box-shadow .5s}
     #vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 48%,rgba(13,31,24,.20) 120%)}
@@ -50,6 +51,8 @@
     .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 25px}.control{padding:12px 9px;border:2px solid #cfcca7;border-radius:9px;background:#eeeac7;text-align:center;font:800 11px/1.4 system-ui,sans-serif}.keys{display:block;color:#3a7243;font:900 13px ui-monospace,monospace;margin-bottom:3px}
     #start{width:100%;border:3px solid #194025;border-radius:10px;padding:14px 18px;background:#6ac653;color:#132c1b;box-shadow:0 6px 0 #2f7138;font:1000 17px system-ui,sans-serif;cursor:pointer;transition:.1s}#start:hover{transform:translateY(-2px);filter:brightness(1.06)}#start:active{transform:translateY(4px);box-shadow:0 2px 0 #2f7138}
     .tip{margin:16px 0 0;text-align:center;font:700 10px/1.5 system-ui,sans-serif;color:#788176}
+    #sleepFade{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#07110b;color:#fff7d8;opacity:0;pointer-events:none;transition:opacity .6s;font:900 18px system-ui,sans-serif;letter-spacing:2px}#sleepFade.asleep{opacity:1;pointer-events:auto}
+    #sleepFade span{transform:translateY(12px);opacity:0;transition:.5s}#sleepFade.asleep span{transform:translateY(0);opacity:1}
     #craftPanel{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:rgba(8,18,12,.68);backdrop-filter:blur(6px)}
     .craft-card{width:min(590px,100%);padding:25px;border:3px solid #183721;border-radius:15px;background:#fff7d8;color:#17291d;box-shadow:0 12px 0 rgba(9,22,13,.5),inset 0 0 0 4px #fffdf0}
     .craft-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.craft-head h2{margin:0;font:1000 27px system-ui,sans-serif}.craft-head p{margin:5px 0 0;color:#657166;font:700 11px system-ui,sans-serif}
@@ -67,6 +70,7 @@
 <body>
   <div id="skyOrb"></div>
   <canvas id="game" tabindex="0" aria-label="MINICRAFT 3D 游戏画面"></canvas>
+  <canvas id="weatherCanvas" aria-hidden="true"></canvas>
   <div id="vignette"></div><div id="damage"></div>
 
   <div id="hud">
@@ -92,6 +96,8 @@
     <div class="touch-actions"><button class="touch-btn" id="touchUse">互动</button><button class="touch-btn" id="touchPlace">放置</button><button class="touch-btn" id="touchMine">挖掘</button><button class="touch-btn jump" data-key="Space">跳跃</button></div>
   </div>
 
+  <div id="sleepFade"><span>晚安，方块世界…</span></div>
+
   <div id="craftPanel" class="hidden">
     <section class="craft-card">
       <div class="craft-head"><div><h2>⚒ 方块工坊</h2><p>把收集来的材料制作成更有用的方块。</p></div><button class="close-craft" id="closeCraft" title="关闭">×</button></div>
@@ -107,9 +113,9 @@
   <div id="intro">
     <section class="card">
       <h1 class="mini-title"><span>MINI</span>CRAFT</h1>
-      <p class="subtitle">穿过会昼夜变化的方块森林，打开木门，探索小屋里的秘密宝箱。<br>还能建造、收集星晶，并用小地图寻找方向。</p>
+      <p class="subtitle">穿过会昼夜和天气变化的方块森林，打开木门，探索小屋里的秘密宝箱。<br>下雨时回家避雨，夜晚还能躺在床上睡到清晨。</p>
       <div class="controls">
-        <div class="control"><span class="keys">W A S D</span>移动与探索</div>
+        <div class="control"><span class="keys">W A S D · Shift</span>移动 · 疾跑</div>
         <div class="control"><span class="keys">鼠标 · 方向键</span>转动视角</div>
         <div class="control"><span class="keys">E · C · 空格</span>互动 · 制作 · 跳跃</div>
       </div>
@@ -280,9 +286,11 @@
   const spawn={x:11.5,y:1.01,z:24.5,yaw:0};
   const player={x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,onGround:false,bob:0};
   const keys={}; let selected=1, started=false, paused=false, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
-  let questStage=0, crystals=0, worldTime=8, skyLight=1;
+  let questStage=0, crystals=0, worldTime=8, skyLight=1, cameraFov=Math.PI/3, stepClock=0;
+  let raining=false, weatherTimer=22, sheepMet=false;
   const stock={1:12,2:18,3:12,4:10,5:0};
   const mini=document.getElementById('minimap'), miniCtx=mini.getContext('2d');
+  const weatherCanvas=document.getElementById('weatherCanvas'), rainCtx=weatherCanvas.getContext('2d');
   const radius=.28, height=1.72;
   const eye=()=>[player.x,player.y+1.56+(player.onGround?Math.sin(player.bob*2)*.018:0),player.z];
   function solidAt(x,y,z){
@@ -295,18 +303,22 @@
     return x-radius<.05||z-radius<.05||x+radius>W-.05||z+radius>D-.05;
   }
   function update(dt){
-    worldTime=(worldTime+dt*.065)%24;
+    worldTime=(worldTime+dt*.065)%24;updateWeather(dt);
     let forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0);
     let side=(keys.KeyD?1:0)-(keys.KeyA?1:0);
     if(keys.ArrowLeft) player.yaw-=1.75*dt; if(keys.ArrowRight) player.yaw+=1.75*dt;
     const len=Math.hypot(forward,side)||1; forward/=len;side/=len;
     const moving=Math.abs(forward)+Math.abs(side)>.01;
-    const speed=(keys.ShiftLeft||keys.ShiftRight)?5.0:3.25;
+    const sprinting=!!(keys.ShiftLeft||keys.ShiftRight),speed=sprinting?5.0:3.25;
+    cameraFov+=(Math.PI/(sprinting&&moving?2.66:3)-cameraFov)*Math.min(1,dt*7);
     const dx=(Math.sin(player.yaw)*forward+Math.cos(player.yaw)*side)*speed*dt;
     const dz=(-Math.cos(player.yaw)*forward+Math.sin(player.yaw)*side)*speed*dt;
     if(!collides(player.x+dx,player.y,player.z)) player.x+=dx;
     if(!collides(player.x,player.y,player.z+dz)) player.z+=dz;
-    if(moving&&player.onGround)player.bob+=dt*(speed>4?8:6);
+    if(moving&&player.onGround){
+      player.bob+=dt*(speed>4?8:6);stepClock-=dt;
+      if(stepClock<=0){tone(72+Math.random()*12,.025,'square',.008);stepClock=sprinting?.28:.43;}
+    }else stepClock=0;
     player.vy-=18*dt;
     let ny=player.y+player.vy*dt;
     if(!collides(player.x,ny,player.z)){player.y=ny;player.onGround=false;}
@@ -336,10 +348,28 @@
   function isInHouse(){return player.x>7.2&&player.x<15.8&&player.z>6.2&&player.z<14.8&&player.y<4;}
   function doorDistance(){return Math.hypot(player.x-11.5,player.z-15.5);}
   function chestDistance(){return Math.hypot(player.x-14.5,player.z-13.5);}
+  function bedExists(){return !!(get(9,1,8)||get(9,1,9));}
+  function bedDistance(){return Math.hypot(player.x-9.5,player.z-8.8);}
+  function sheepExists(){return !!(get(20,1,21)||get(21,1,21)||get(19,1,21));}
+  function sheepDistance(){return Math.hypot(player.x-20.3,player.z-21.5);}
+  function isSheepBlock(x,y,z){return z===21&&((x===20&&y===1)||(x===21&&y===1)||(x===19&&(y===1||y===2)));}
   function interact(){
     if(!chestOpened&&chestDistance()<2.7&&isInHouse()){useChest();return;}
+    if(bedExists()&&bedDistance()<2.55&&isInHouse()){useBed();return;}
+    if(sheepExists()&&sheepDistance()<3){petSheep();return;}
     if(doorDistance()<3.15){useDoor();return;}
     toast('这里没有可互动的东西');
+  }
+  function useBed(){
+    if(!bedExists())return;const night=worldTime>=18.5||worldTime<6.2;
+    if(!night){toast('☀ 天还亮着，晚上再来睡吧');return;}
+    paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('sleepFade').classList.add('asleep');tone(330,.18,'sine',.025);
+    setTimeout(()=>{worldTime=7;raining=false;weatherTimer=45;updateSky();saveGame();},650);
+    setTimeout(()=>{document.getElementById('sleepFade').classList.remove('asleep');paused=false;toast('☀ 新的一天开始了');tone(620,.12,'sine');},1450);
+  }
+  function petSheep(){
+    if(!sheepMet){sheepMet=true;stock[1]=Math.min(99,stock[1]+2);updateInventory();toast('🐑 新朋友：方块羊送你草方块 ×2');tone(480,.08,'square');setTimeout(()=>tone(560,.1,'square'),90);saveGame();}
+    else {toast('🐑 咩～ 今天也要好好探索！');tone(500,.09,'square');}
   }
   function useChest(){
     if(chestOpened||chestDistance()>2.7||!isInHouse())return;
@@ -361,6 +391,7 @@
   function mine(){
     const hit=raycast(); if(!hit)return;
     const [x,y,z]=hit.block;
+    if(isSheepBlock(x,y,z)){petSheep();return;}
     if(hit.type===8){useDoor();return;}
     if(hit.type===16||hit.type===19){if(!chestOpened)useChest();return;}
     if(y<=0){toast('草地要留在脚下');return;}
@@ -416,27 +447,43 @@
   function render(){
     resize();gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
     const e=eye(),d=forwardVector(),center=[e[0]+d[0],e[1]+d[1],e[2]+d[2]];
-    const mvp=mul(perspective(Math.PI/3,canvas.width/canvas.height,.06,65),lookAt(e,center,[0,1,0]));
+    const mvp=mul(perspective(cameraFov,canvas.width/canvas.height,.06,65),lookAt(e,center,[0,1,0]));
     gl.uniformMatrix4fv(uMVP,false,mvp);gl.uniform3fv(uEye,e);gl.uniform3fv(uFog,currentFog);gl.uniform1f(uFogNear,18);gl.uniform1f(uFogFar,45);gl.uniform1f(uLight,skyLight);let lp=lampPositions[0]||[999,999,999],ld=Infinity;for(const q of lampPositions){const d=(q[0]-e[0])**2+(q[1]-e[1])**2+(q[2]-e[2])**2;if(d<ld){ld=d;lp=q;}}gl.uniform3fv(uLamp,lp);
     gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);gl.enableVertexAttribArray(aPos);gl.enableVertexAttribArray(aColor);gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(aColor,3,gl.FLOAT,false,24,12);
     gl.drawArrays(gl.TRIANGLES,0,vertexCount);drawTarget(mvp);
   }
+  const rainDrops=Array.from({length:120},()=>({x:Math.random(),y:Math.random(),s:.75+Math.random()*1.15,l:10+Math.random()*18}));
+  function updateWeather(dt){
+    weatherTimer-=dt;if(weatherTimer>0)return;raining=!raining;weatherTimer=raining?28+Math.random()*22:55+Math.random()*45;
+    toast(raining?'☂ 下雨了 · 回小屋避雨吧':'☀ 雨停了 · 天空放晴');
+  }
+  function drawWeather(dt){
+    const dpr=Math.min(devicePixelRatio||1,1.75),w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
+    if(weatherCanvas.width!==w||weatherCanvas.height!==h){weatherCanvas.width=w;weatherCanvas.height=h;}
+    rainCtx.clearRect(0,0,w,h);if(!started||!raining||isInHouse())return;
+    const count=innerWidth<720?72:rainDrops.length,wind=.10+Math.sin(worldTime)*.035;
+    rainCtx.lineWidth=Math.max(1,dpr);rainCtx.strokeStyle=skyLight<.45?'rgba(174,205,244,.62)':'rgba(216,239,255,.72)';rainCtx.beginPath();
+    for(let i=0;i<count;i++){const r=rainDrops[i];r.y+=r.s*dt;r.x+=wind*dt;if(r.y>1.08){r.y=-.08;r.x=Math.random();}if(r.x>1.05)r.x=-.05;const x=r.x*w,y=r.y*h;rainCtx.moveTo(x,y);rainCtx.lineTo(x-wind*r.l*dpr,y+r.l*dpr);}
+    rainCtx.stroke();
+  }
   let last=performance.now();
-  function loop(now){const dt=Math.min((now-last)/1000,.045);last=now;if(started&&!paused)update(dt);render();requestAnimationFrame(loop);} requestAnimationFrame(loop);
+  function loop(now){const dt=Math.min((now-last)/1000,.045);last=now;if(started&&!paused)update(dt);render();drawWeather(dt);requestAnimationFrame(loop);} requestAnimationFrame(loop);
 
   // ---------- UI, input, sound ----------
   const prompt=document.getElementById('prompt'), toastEl=document.getElementById('toast'); let toastTimer;
   let currentFog=new Float32Array([.54,.80,.91]), mapTick=0;
   function updateSky(){
-    const sun=Math.max(0,Math.sin((worldTime-6)/12*Math.PI));skyLight=.26+.74*sun;
+    const sun=Math.max(0,Math.sin((worldTime-6)/12*Math.PI));skyLight=(.26+.74*sun)*(raining?.72:1);
     const dawn=Math.max(0,1-Math.abs(worldTime-6)/2)+Math.max(0,1-Math.abs(worldTime-18)/2);
     currentFog=new Float32Array([.055+.49*sun+.20*dawn,.09+.71*sun+.05*dawn,.18+.73*sun]);
-    const top=[Math.round(12+95*sun+90*dawn),Math.round(25+150*sun+45*dawn),Math.round(55+185*sun)];
-    const bottom=[Math.round(28+175*sun),Math.round(42+195*sun),Math.round(72+165*sun)];
-    document.body.style.background=`linear-gradient(rgb(${top}) 0%,rgb(${bottom}) 68%,#dceacb 100%)`;
+    if(raining)currentFog=new Float32Array([currentFog[0]*.58+.17,currentFog[1]*.58+.20,currentFog[2]*.62+.24]);
+    let top=[Math.round(12+95*sun+90*dawn),Math.round(25+150*sun+45*dawn),Math.round(55+185*sun)];
+    let bottom=[Math.round(28+175*sun),Math.round(42+195*sun),Math.round(72+165*sun)];
+    if(raining){top=top.map(v=>Math.round(v*.58));bottom=bottom.map(v=>Math.round(v*.68));}
+    document.body.style.background=`linear-gradient(rgb(${top}) 0%,rgb(${bottom}) 68%,${raining?'#8fa29a':'#dceacb'} 100%)`;
     const orb=document.getElementById('skyOrb'),phase=(worldTime-6)/24*Math.PI*2;
     orb.style.left=`${8+((worldTime+18)%24)/24*84}%`;orb.style.top=`${58-Math.sin(phase)*45}%`;
-    const night=sun<.08;orb.style.background=night?'#dce7ff':'#ffe98b';orb.style.boxShadow=night?'0 0 28px rgba(190,215,255,.5)':'0 0 35px rgba(255,235,135,.75)';
+    const night=sun<.08;orb.style.opacity=raining?'.14':'1';orb.style.background=night?'#dce7ff':'#ffe98b';orb.style.boxShadow=night?'0 0 28px rgba(190,215,255,.5)':'0 0 35px rgba(255,235,135,.75)';
   }
   function drawMinimap(){
     const c=miniCtx,sc=5;c.clearRect(0,0,160,160);
@@ -449,16 +496,16 @@
   }
   function updateHud(){
     document.getElementById('coords').textContent=`X ${player.x.toFixed(1)} · Y ${player.y.toFixed(1)} · Z ${player.z.toFixed(1)}`;
-    const h=Math.floor(worldTime),m=Math.floor((worldTime-h)*60);document.getElementById('clockHud').textContent=`${worldTime>6&&worldTime<18?'☀':'☾'} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const h=Math.floor(worldTime),m=Math.floor((worldTime-h)*60);document.getElementById('clockHud').textContent=`${raining?'☂':worldTime>6&&worldTime<18?'☀':'☾'} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     document.getElementById('crystalHud').textContent=`✦ 星晶 ${crystals}/3`;
-    const nearChest=!chestOpened&&chestDistance()<2.7&&isInHouse(),nearDoor=doorDistance()<3.15;
-    prompt.classList.toggle('show',nearChest||nearDoor);
-    document.querySelector('#prompt span').textContent=nearChest?'打开宝箱':doorOpen?'关闭木门':'打开木门';
+    const nearChest=!chestOpened&&chestDistance()<2.7&&isInHouse(),nearBed=bedExists()&&bedDistance()<2.55&&isInHouse(),nearSheep=sheepExists()&&sheepDistance()<3,nearDoor=doorDistance()<3.15;
+    prompt.classList.toggle('show',nearChest||nearBed||nearSheep||nearDoor);
+    document.querySelector('#prompt span').textContent=nearChest?'打开宝箱':nearBed?(worldTime>=18.5||worldTime<6.2?'睡到早晨':'整理床铺'):nearSheep?'摸摸方块羊':doorOpen?'关闭木门':'打开木门';
     if((mapTick++&3)===0)drawMinimap();
   }
   const SAVE_KEY='minicraft-cabin-v3';let memorySave=null;
   function saveGame(notify=false){
-    const data={v:3,world:[...world],player:{x:player.x,y:player.y,z:player.z,yaw:player.yaw,pitch:player.pitch},stock:{...stock},selected,doorOpen,chestOpened,questDone,questStage,crystals,worldTime};
+    const data={v:3,world:[...world],player:{x:player.x,y:player.y,z:player.z,yaw:player.yaw,pitch:player.pitch},stock:{...stock},selected,doorOpen,chestOpened,questDone,questStage,crystals,worldTime,raining,weatherTimer,sheepMet};
     const json=JSON.stringify(data);let persistent=true;try{localStorage.setItem(SAVE_KEY,json);}catch(e){memorySave=json;persistent=false;}
     const b=document.getElementById('saveBtn');b.classList.remove('saved');void b.offsetWidth;b.classList.add('saved');
     if(notify)toast(persistent?'◆ 冒险进度已保存':'◆ 已保存本次会话 · 下载后可长期保存');
@@ -474,16 +521,17 @@
     try{
       let raw=memorySave;try{raw=localStorage.getItem(SAVE_KEY)||raw;}catch(e){}if(!raw)return false;const d=JSON.parse(raw);if(d.v!==3||!Array.isArray(d.world))return false;
       world.clear();d.world.forEach(([k,v])=>world.set(k,v));Object.assign(player,d.player||{});Object.assign(stock,d.stock||{});
-      selected=d.selected||1;doorOpen=!!d.doorOpen;chestOpened=!!d.chestOpened;questDone=!!d.questDone;questStage=d.questStage||0;crystals=d.crystals||0;worldTime=d.worldTime??8;
+      selected=d.selected||1;doorOpen=!!d.doorOpen;chestOpened=!!d.chestOpened;questDone=!!d.questDone;questStage=d.questStage||0;crystals=d.crystals||0;worldTime=d.worldTime??8;raining=!!d.raining;weatherTimer=d.weatherTimer??22;sheepMet=!!d.sheepMet;
       rebuildMesh();updateInventory();select(selected);restoreQuest();document.getElementById('start').textContent='继续上次冒险 →';return true;
     }catch(e){return false;}
   }
   function toast(text){toastEl.textContent=text;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1800);}
   let audioCtx;
-  function tone(freq,dur,type){if(!soundOn)return;try{audioCtx=audioCtx||new (AudioContext||webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(.045,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}}
+  function tone(freq,dur,type,volume=.045){if(!soundOn)return;try{audioCtx=audioCtx||new (AudioContext||webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(volume,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}}
   function begin(){started=true;paused=false;document.getElementById('intro').classList.add('hidden');canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();tone(520,.08,'sine');}
   document.getElementById('start').addEventListener('click',begin);
   addEventListener('keydown',e=>{
+    if(document.getElementById('sleepFade').classList.contains('asleep'))return;
     if(e.code==='KeyC'&&!e.repeat){e.preventDefault();toggleCraft();return;}
     if(e.code==='Escape'&&!document.getElementById('craftPanel').classList.contains('hidden')){toggleCraft(false);return;}
     if(paused)return;keys[e.code]=true;
@@ -509,7 +557,7 @@
   canvas.addEventListener('wheel',e=>{e.preventDefault();select(selected%5+1);},{passive:false});
   document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>select(+s.dataset.type)));
   function resetGame(){
-    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,bob:0});doorOpen=false;chestOpened=false;questDone=false;questStage=0;crystals=0;worldTime=8;
+    Object.assign(player,{x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,bob:0});doorOpen=false;chestOpened=false;questDone=false;questStage=0;crystals=0;worldTime=8;raining=false;weatherTimer=22;sheepMet=false;cameraFov=Math.PI/3;
     Object.assign(stock,{1:12,2:18,3:12,4:10,5:0});selected=1;select(1);buildWorld();rebuildMesh();updateInventory();
     document.getElementById('quest').classList.remove('done');document.getElementById('questText').textContent='找到木门，按 E 打开它';document.getElementById('questProgress').style.width='12%';document.querySelector('#prompt span').textContent='打开木门';toast('世界已重新生成');saveGame();
   }
@@ -536,6 +584,5 @@
   setInterval(()=>{if(started&&!paused)saveGame();},10000);addEventListener('pagehide',()=>{if(started)saveGame();});
 })();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a194fab63a603222',t:'MTc4Mzc0MzI0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a194fd95bda23222',t:'MTc4Mzc0MzM2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
