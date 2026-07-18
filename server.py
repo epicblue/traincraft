@@ -42,6 +42,9 @@ class Room:
         self.password_hash = ""
         self.guest_can_build = True
         self.save_task: asyncio.Task | None = None
+        self.dirty = False
+        self.dirty_since = 0.0
+        self.last_dirty = 0.0
         self.load()
 
     @property
@@ -62,13 +65,34 @@ class Room:
             print(f"[room {self.id}] failed to load: {exc}")
 
     def schedule_save(self) -> None:
-        if self.save_task and not self.save_task.done():
-            self.save_task.cancel()
-        self.save_task = asyncio.create_task(self._save_later())
+        now = time.monotonic()
+        if not self.dirty:
+            self.dirty_since = now
+        self.dirty = True
+        self.last_dirty = now
+        if not self.save_task or self.save_task.done():
+            self.save_task = asyncio.create_task(self._save_worker())
 
-    async def _save_later(self) -> None:
+    async def _save_worker(self) -> None:
         try:
-            await asyncio.sleep(2.0)
+            while self.dirty:
+                await asyncio.sleep(0.5)
+                now = time.monotonic()
+                quiet_for = now - self.last_dirty
+                dirty_for = now - self.dirty_since
+                if quiet_for < 2.0 and dirty_for < 10.0:
+                    continue
+                self._save_now()
+                await self.broadcast({"kind": "serverSaved", "at": time.time()})
+                self.dirty = False
+                self.dirty_since = 0.0
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            print(f"[room {self.id}] save worker failed: {exc}")
+
+    def _save_now(self) -> None:
+        try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(
@@ -77,10 +101,16 @@ class Room:
             )
             tmp.replace(self.path)
             print(f"[room {self.id}] saved {len(self.world)} blocks")
-        except asyncio.CancelledError:
-            pass
         except Exception as exc:
             print(f"[room {self.id}] save failed: {exc}")
+
+    async def flush(self) -> None:
+        if self.save_task and not self.save_task.done():
+            self.save_task.cancel()
+        if self.dirty:
+            self._save_now()
+            self.dirty = False
+            self.dirty_since = 0.0
 
     def snapshot(self) -> dict[str, Any]:
         return {**self.shared, "kind": "snapshot", "world": list(self.world.items())}
@@ -324,11 +354,17 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
+async def cleanup_rooms(app: web.Application) -> None:
+    for room in list(app["rooms"].values()):
+        await room.flush()
+
+
 def make_app(root: Path, data_dir: Path) -> web.Application:
     app = web.Application(client_max_size=MAX_MESSAGE)
     app["root"] = root
     app["data_dir"] = data_dir
     app["rooms"] = {}
+    app.on_cleanup.append(cleanup_rooms)
     app.router.add_get("/", index)
     app.router.add_get("/index.html", index)
     app.router.add_get("/api/rooms", rooms_api)
