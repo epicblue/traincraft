@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import re
+import secrets
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import Any
 from aiohttp import WSMsgType, web
 
 ROOM_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
-MAX_CLIENTS = 2
+MAX_CLIENTS = 8
 MAX_MESSAGE = 4 * 1024 * 1024
 
 
@@ -28,6 +29,7 @@ def safe_json(data: Any) -> str:
 class Client:
     ws: web.WebSocketResponse
     name: str
+    id: str = field(default_factory=lambda: secrets.token_hex(4))
     chunks: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -135,20 +137,20 @@ class Room:
 
     async def add(self, client: Client) -> bool:
         if len(self.clients) >= MAX_CLIENTS:
-            await client.ws.send_str(safe_json({"kind": "error", "message": "房间已满（最多两人）"}))
+            await client.ws.send_str(safe_json({"kind": "error", "message": f"房间已满（最多 {MAX_CLIENTS} 人）"}))
             await client.ws.close(code=4001, message=b"room full")
             return False
         self.clients.append(client)
         if self.host is None:
             self.host = client
         role = "host" if client is self.host else "guest"
-        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build})
-        await self.broadcast({"kind": "hello", "name": client.name}, exclude=client)
+        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build, "selfId": client.id})
+        await self.broadcast({"kind": "hello", "name": client.name, "clientId": client.id}, exclude=client)
         if self.world:
             await self.send(client, self.snapshot())
         elif self.host:
             await self.send(self.host, {"kind": "requestSnapshot"})
-        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else ""})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name} for c in self.clients]})
         print(f"[room {self.id}] {client.name} joined as {role}")
         return True
 
@@ -159,8 +161,8 @@ class Room:
         if self.host is client:
             self.host = self.clients[0] if self.clients else None
             if self.host:
-                await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build})
-        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else ""})
+                await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build, "selfId": self.host.id})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name} for c in self.clients]})
         print(f"[room {self.id}] {client.name} left")
 
     async def process(self, client: Client, payload: dict[str, Any]) -> None:
@@ -187,7 +189,7 @@ class Room:
 
         if kind == "hello":
             client.name = str(payload.get("name") or client.name)[:18]
-            await self.broadcast({"kind": "hello", "name": client.name}, exclude=client)
+            await self.broadcast({"kind": "hello", "name": client.name, "clientId": client.id}, exclude=client)
             return
 
         if kind == "permission":
@@ -283,13 +285,29 @@ class Room:
             await self.send(client, self.snapshot())
             return
 
-        if kind in {"chat", "player", "ping", "pong", "checksum"}:
-            if kind == "chat":
-                payload = {
-                    "kind": "chat",
-                    "name": client.name,
-                    "text": str(payload.get("text", ""))[:120],
-                }
+        if kind == "chat":
+            await self.broadcast({"kind": "chat", "name": client.name, "clientId": client.id, "text": str(payload.get("text", ""))[:120]}, exclude=client)
+            return
+
+        if kind == "player":
+            clean = {"kind": "player", "clientId": client.id, "name": client.name}
+            for key in ("x", "y", "z", "yaw", "pitch"):
+                try:
+                    clean[key] = float(payload.get(key, 0))
+                except (TypeError, ValueError):
+                    clean[key] = 0.0
+            clean["style"] = int(payload.get("style", 0) or 0)
+            clean["selected"] = int(payload.get("selected", 1) or 1)
+            clean["flying"] = bool(payload.get("flying", False))
+            clean["mining"] = bool(payload.get("mining", False))
+            await self.broadcast(clean, exclude=client)
+            return
+
+        if kind == "ping":
+            await self.send(client, {"kind": "pong", "id": payload.get("id")})
+            return
+
+        if kind == "checksum":
             await self.broadcast(payload, exclude=client)
 
 
@@ -299,7 +317,7 @@ async def index(request: web.Request) -> web.FileResponse:
 
 async def rooms_api(request: web.Request) -> web.Response:
     rooms: dict[str, Room] = request.app["rooms"]
-    payload = [{"id": r.id, "players": len(r.clients), "blocks": len(r.world), "locked": bool(r.password_hash)} for r in rooms.values()]
+    payload = [{"id": r.id, "players": len(r.clients), "capacity": MAX_CLIENTS, "blocks": len(r.world), "locked": bool(r.password_hash)} for r in rooms.values()]
     return web.json_response({"rooms": payload}, headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
 
 
@@ -373,7 +391,7 @@ def make_app(root: Path, data_dir: Path) -> web.Application:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="MINICRAFT 双人共建服务器")
+    parser = argparse.ArgumentParser(description="MINICRAFT 多人共建服务器")
     parser.add_argument("--host", default="0.0.0.0", help="监听地址，默认 0.0.0.0")
     parser.add_argument("--port", type=int, default=8765, help="HTTP/WebSocket 端口，默认 8765")
     parser.add_argument("--data-dir", default="server_data", help="房间存档目录")
