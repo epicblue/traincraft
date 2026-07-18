@@ -190,7 +190,7 @@
       <div class="travel-row"><button id="travelBtn">白天快速前往</button><button id="openMapBtn">▦ 查看大地图</button><button id="openInventoryBtn">▣ 背包</button><button id="openStoryBtn">📖 故事</button></div>
       <p class="section-label">画面设置</p><div class="settings-row"><button id="qualityBtn">画质：均衡</button><button id="weatherFxBtn">天气粒子：开</button><span class="perf-pill" id="perfText">60 FPS</span></div>
       <p class="section-label">控制与声音</p><div class="control-settings"><label class="setting-slider">鼠标灵敏度 <span id="senseValue">100%</span><input id="senseSlider" type="range" min="50" max="200" value="100"></label><label class="setting-slider">视野范围 <span id="fovValue">60°</span><input id="fovSlider" type="range" min="55" max="90" value="60"></label><label class="setting-slider">声音音量 <span id="volumeValue">100%</span><input id="volumeSlider" type="range" min="0" max="100" value="100"></label></div>
-      <div class="pause-help">WASD 移动 · Shift 疾跑／飞行下降 · F 飞行 · E 互动 · C 制作 · I 背包 · B 装修 · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图 · 空格跳跃<br>按住左键挖掘／点击攻击 · 右键放置 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9 切换</div>
+      <div class="pause-help">WASD 移动 · Shift 疾跑／飞行下降 · F 飞行 · E 互动 · C 制作 · I 背包 · B 装修 · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图 · 空格跳跃<br>按住左键挖掘／点击攻击 · 按住右键连续放置 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9 切换</div>
       <div class="pause-actions"><button class="resume" id="resumeBtn">继续冒险 →</button><button id="pauseSaveBtn">◆ 保存进度</button><button id="modeBtn">☠ 夜间生物：开</button><button id="flightBtn">✈ 飞行模式：关</button><button id="pauseUndoBtn">↶ 撤销建造</button><button class="danger" id="pauseResetBtn">↻ 新建世界</button></div>
       <div class="save-tools"><button id="exportSaveBtn">⇩ 导出存档备份</button><button id="importSaveBtn">⇧ 导入存档备份</button></div><input id="importSaveInput" type="file" accept="application/json,.json" hidden><div id="pauseSaveState"></div>
     </section>
@@ -224,7 +224,7 @@
         <div class="control"><span class="keys">E · C · 空格</span>互动 · 制作 · 跳跃</div>
       </div>
       <button id="start">开始探索 →</button>
-      <p class="tip">按住左键挖掘／点击攻击 · 右键消耗材料放置 · 中键取样 · 数字键 1–9 切换物品 · 默认第三人称 · F 飞行（最高128格） · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
+      <p class="tip">按住左键挖掘／点击攻击 · 按住右键连续放置 · 中键取样 · 数字键 1–9 切换物品 · 默认第三人称 · F 飞行（最高128格） · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
     </section>
   </div>
 
@@ -503,7 +503,7 @@
   // ---------- Player & physics ----------
   const spawn={x:11.5,y:1.01,z:24.5,yaw:0};
   const player={x:spawn.x,y:spawn.y,z:spawn.z,yaw:spawn.yaw,pitch:-.06,vy:0,onGround:false,bob:0};
-  const keys={}; let selected=1, started=false, paused=false, mineHeld=false, miningTarget='', miningProgress=0, miningSwing=0, miningType=0, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
+  const keys={}; let selected=1, started=false, paused=false, mineHeld=false, miningTarget='', miningProgress=0, miningSwing=0, miningType=0, placeHeld=false, placeRepeat=0, placeDirty=false, doorOpen=false, chestOpened=false, questDone=false, soundOn=true;
   let questStage=0, crystals=0, worldTime=8, skyLight=1, cameraFov=Math.PI/3, baseFov=60, mouseSensitivity=1, masterVolume=1, cameraMode=1, cameraDistance=4, cameraShoulder=1, thirdCameraDistance=4, cameraActual=null, actionTimer=0, stepClock=0, graphicsMode=1, qualityDpr=1.35, renderDistance=48, weatherCap=80, weatherFx=true;
   let raining=false, weatherTimer=22, sheepMet=false, caveFound=false, campFound=false, iglooFound=false, waypoint='house', mapReturnToPause=false, inventoryReturnToPause=false, storyReturnToPause=false, mailReturnToPause=false, decorReturnToPause=false, miniMode=0, gardenReady=true, gardenTimer=0, bookRead=false, bookTipIndex=0, loftVisited=false, doorAngle=0,pauseOpenedAt=0,worldGeneration=0,avatarStyle=0,emoteTimer=0;
   const landmarks={house:{x:11.5,y:1.01,z:17.5,name:'小屋',icon:'⌂'},cave:{x:25.5,y:1.01,z:23.25,name:'矿洞',icon:'⬟'},camp:{x:42,y:1.01,z:24.2,name:'营地',icon:'♨'},igloo:{x:56.5,y:1.01,z:15.2,name:'冰屋',icon:'❄'}};
@@ -594,7 +594,7 @@
     if(flying){const vertical=(keys.Space?1:0)-((shift||keys.FlyDown)?1:0),dy=vertical*(boost?7:4.2)*dt,ny=player.y+dy;if(dy&&ny>.65&&ny<MAX_BUILD_HEIGHT+10&&!collides(player.x,ny,player.z))player.y=ny;player.vy=0;player.onGround=false;stepClock=0;}
     else {if(moving&&player.onGround){player.bob+=dt*(speed>4?8:6);stepClock-=dt;if(stepClock<=0){playFootstep();stepClock=sprinting?.28:.43;}}else stepClock=0;player.vy-=18*dt;const ny=player.y+player.vy*dt;if(!collides(player.x,ny,player.z)){player.y=ny;player.onGround=false;}else{if(player.vy<0)player.onGround=true;player.vy=0;}}
     if(player.y<.5) resetGame();
-    updateSlimes(dt);updateCat(dt);updateFishing(dt);updateGarden(dt);updateMining(dt);
+    updateSlimes(dt);updateCat(dt);updateFishing(dt);updateGarden(dt);updateMining(dt);updatePlacing(dt);
     const inHouse=isInHouse();
     if(inHouse&&questStage<2){
       questStage=2; document.getElementById('questText').textContent='找到屋内角落的宝箱，按 E 开启';
@@ -606,7 +606,7 @@
     if(isInIgloo()&&!iglooFound){iglooFound=true;toast('发现北境雪原冰屋');tone(700,.12,'sine');laterUnlock('igloo','极地访客',900);unlockStory(7,true);updateEndQuestText();saveGame();}
     updateSky(); updateHud();
   }
-  function toggleFlight(){stopMining();flying=!flying;player.vy=0;player.onGround=false;keys.FlyDown=false;document.getElementById('touchUse').textContent=flying?'下降':'互动';updateFlightUI();toast(flying?'飞行模式已开启 · 空格上升，Shift下降，Ctrl加速':'飞行模式已关闭');tone(flying?640:380,.08,'sine');saveGame();}
+  function toggleFlight(){stopMining();stopPlacing();flying=!flying;player.vy=0;player.onGround=false;keys.FlyDown=false;document.getElementById('touchUse').textContent=flying?'下降':'互动';updateFlightUI();toast(flying?'飞行模式已开启 · 空格上升，Shift下降，Ctrl加速':'飞行模式已关闭');tone(flying?640:380,.08,'sine');saveGame();}
   function updateFlightUI(){document.getElementById('flightHud').classList.toggle('hidden',!flying);document.getElementById('flightBtn').textContent=flying?'✈ 飞行模式：开':'✈ 飞行模式：关';const b=document.getElementById('touchUse');if(b)b.textContent=flying?'下降':'互动';}
   function jump(){if(flying)return;if(player.onGround){player.vy=6.5;player.onGround=false;tone(170,.06,'square');}}
   function playFootstep(){
@@ -615,7 +615,7 @@
 
   // ---------- Interaction ----------
   function forwardVector(){const cp=Math.cos(player.pitch);return [Math.sin(player.yaw)*cp,Math.sin(player.pitch),-Math.cos(player.yaw)*cp];}
-  function raycast(max=6){
+  function raycast(max=(flying?12:6)){
     const e=eye(),d=forwardVector(); let last=null,lastKey='';
     for(let t=0;t<=max;t+=.035){
       const p=[e[0]+d[0]*t,e[1]+d[1]*t,e[2]+d[2]*t], b=[Math.floor(p[0]),Math.floor(p[1]),Math.floor(p[2])], k=b.join(',');
@@ -706,7 +706,7 @@
   }
   function mailboxExists(){return get(7,1,19)===33;}
   function mailboxDistance(){return Math.hypot(player.x-7.5,player.z-19.5);}
-  function openMailbox(){if(!mailboxExists()||mailboxDistance()>2.6)return;stopMining();paused=true;mailReturnToPause=false;Object.keys(keys).forEach(k=>keys[k]=false);const letter=dailyLetters[dayCount%dailyLetters.length],fresh=dayCount>mailDay;document.getElementById('mailDate').textContent=`门廊信箱 · 第 ${dayCount+1} 天${fresh?' · 新信':''}`;document.getElementById('mailTitle').textContent=letter.title;document.getElementById('mailBody').textContent=letter.body;document.getElementById('mailPanel').classList.remove('hidden');document.exitPointerLock?.();if(fresh){mailDay=dayCount;rebuildMesh();saveGame();}}
+  function openMailbox(){if(!mailboxExists()||mailboxDistance()>2.6)return;stopMining();stopPlacing();paused=true;mailReturnToPause=false;Object.keys(keys).forEach(k=>keys[k]=false);const letter=dailyLetters[dayCount%dailyLetters.length],fresh=dayCount>mailDay;document.getElementById('mailDate').textContent=`门廊信箱 · 第 ${dayCount+1} 天${fresh?' · 新信':''}`;document.getElementById('mailTitle').textContent=letter.title;document.getElementById('mailBody').textContent=letter.body;document.getElementById('mailPanel').classList.remove('hidden');document.exitPointerLock?.();if(fresh){mailDay=dayCount;rebuildMesh();saveGame();}}
   function closeMailbox(){document.getElementById('mailPanel').classList.add('hidden');paused=false;canvas.focus();canvas.requestPointerLock?.();}
   function fireplaceExists(){return get(15,1,8)===26;}
   function fireplaceDistance(){return Math.hypot(player.x-15.2,player.z-8.5);}
@@ -728,7 +728,7 @@
     else {const atBed=Math.hypot(cat.x-7.5,cat.z-12.5)<.8,night=worldTime>=19||worldTime<6;cat.pose=atBed&&night?'sleep':'sit';}
   }
   function updateCatPanel(){document.getElementById('catHearts').textContent='♥'.repeat(cat.affection)+'♡'.repeat(5-cat.affection);document.getElementById('catFishCount').textContent=materialCount(8);document.getElementById('catFeedBtn').disabled=materialCount(8)<=0||cat.affection>=5;document.getElementById('catPlayBtn').disabled=cat.playTimer>0;const giftReady=cat.affection>=5&&dayCount>cat.giftDay;document.getElementById('catGiftBtn').disabled=!giftReady;document.getElementById('catGiftBtn').textContent=cat.affection<5?'亲密度满后解锁':giftReady?'领取礼物':'今日礼物已领取';document.getElementById('catStatus').textContent=cat.mode==='play'?'正在追毛线球':cat.mode==='follow'?'正在跟随':cat.mode==='stay'?'正在原地等待':'正在回小屋休息';document.querySelectorAll('[data-catmode]').forEach(b=>b.classList.toggle('active',b.dataset.catmode===cat.mode));}
-  function openCatPanel(){if(!cat.befriended||catDistance()>2.2)return;stopMining();paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('catPanel').classList.remove('hidden');document.exitPointerLock?.();updateCatPanel();}
+  function openCatPanel(){if(!cat.befriended||catDistance()>2.2)return;stopMining();stopPlacing();paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('catPanel').classList.remove('hidden');document.exitPointerLock?.();updateCatPanel();}
   function closeCatPanel(){document.getElementById('catPanel').classList.add('hidden');paused=false;canvas.focus();canvas.requestPointerLock?.();}
   function catMessage(text){document.getElementById('catNote').textContent=text;clearTimeout(cat._note);cat._note=setTimeout(()=>document.getElementById('catNote').textContent='',1500);}
   function checkCatBond(){if(cat.affection>=5&&!achievements.has('bestcat')){achievements.add('bestcat');updatePauseUI();catMessage('亲密度已满 · 解锁“最好的朋友”');tone(880,.12,'sine');}}
@@ -820,11 +820,14 @@
     set(x,y,z,0);rebuildMesh();updateInventory();burst(drop===2?'#b57a43':drop===3?'#89918d':drop===5?'#ffb529':'#73bd4f');tone(105,.07,'square');saveGame();
   }
   function pickTargetBlock(){const hit=raycast();if(!hit){toast('没有可取样的方块');return;}const map={1:1,2:2,3:3,4:4,5:2,6:32,7:34,8:31,9:5,24:2,27:2,29:2,34:34},item=map[hit.type];if(!item){toast('这个方块不在快捷栏中');return;}select(item);toast(`已选择 ${itemDefs[item]?.name||'方块'}`);}
+  function beginPlacing(){if(cameraMode===2||selected===6)return;placeHeld=true;placeRepeat=.28;place();}
+  function stopPlacing(){if(!placeHeld&&!placeDirty)return;placeHeld=false;placeRepeat=0;if(placeDirty){placeDirty=false;saveGame();}}
+  function updatePlacing(dt){if(!placeHeld)return;placeRepeat-=dt;if(placeRepeat<=0){place();placeRepeat=.13;}}
   function place(){
     if(cameraMode===2){toast('正面视角用于观察角色，按 F5 返回');return;}if(selected===6){toast('石剑用于攻击，不能作为方块放置');return;}swingHand();const hit=raycast();if(!hit||!hit.place)return;const [x,y,z]=hit.place;if(y<0||!insideWorld(x,z))return;if(y>MAX_BUILD_HEIGHT){toast(`已达到最大建造高度 ${MAX_BUILD_HEIGHT}`);return;}if((stock[selected]||0)<=0){toast('这种材料用完了，先去收集一些');return;}
     if(selected===31){if(y>=MAX_BUILD_HEIGHT||get(x,y+1,z)){toast('木门需要两格高的空间');return;}set(x,y,z,8);set(x,y+1,z,8);if(collides(player.x,player.y,player.z)){set(x,y,z,0);set(x,y+1,z,0);toast('不能放在自己身上');return;}if(x===11&&z===15&&y===1){mainDoorExists=true;doorOpen=false;}else placedDoors.push({x,y,z,open:false,angle:0});buildHistory.push({x,y,z,type:8,item:31,height:2});}
     else {const worldType=selected===32?6:selected===34?34:selected===5?9:selected;set(x,y,z,worldType);if(collides(player.x,player.y,player.z)){set(x,y,z,0);toast('不能放在自己身上');return;}buildHistory.push({x,y,z,type:worldType,item:selected,height:1});}
-    if(buildHistory.length>40)buildHistory.shift();stock[selected]--;stats.placed++;if(stats.placed>=10)unlock('builder','小小建筑师');rebuildMesh();updateInventory();burst('#ffd45c');tone(145,.05,'square');saveGame();
+    if(buildHistory.length>40)buildHistory.shift();stock[selected]--;stats.placed++;if(stats.placed>=10)unlock('builder','小小建筑师');rebuildMesh();updateInventory();burst('#ffd45c');tone(145,.05,'square');if(placeHeld)placeDirty=true;else saveGame();
   }
   function undoBuild(){
     while(buildHistory.length){const b=buildHistory.pop();if(get(b.x,b.y,b.z)!==b.type)continue;set(b.x,b.y,b.z,0);if(b.height===2){set(b.x,b.y+1,b.z,0);const d=findPlacedDoorByBlock(b.x,b.y,b.z);if(d){const i=placedDoors.indexOf(d);if(i>=0)placedDoors.splice(i,1);}}if(b.x===11&&b.z===15&&b.type===8){mainDoorExists=false;doorOpen=false;}const item=b.item||b.type;if(stock[item]!==undefined)stock[item]=Math.min(itemCap(item),(stock[item]||0)+1);rebuildMesh();updateInventory();toast('已撤销上一次放置');tone(310,.06,'square');saveGame();return;}toast('没有可撤销的建造');
@@ -845,7 +848,7 @@
     const grid=document.getElementById('inventoryGrid');grid.innerHTML=Object.entries(itemDefs).map(([t,d])=>`<button class="inv-item ${hotbarOrder.includes(+t)?'selectable':''} ${selected===+t?'selected':''}" data-type="${t}" ${!hotbarOrder.includes(+t)?'disabled':''}><i class="inv-icon" style="background:${d.color}"></i><span><b>${d.name}</b><small>数量 ${stock[t]||0}</small></span>${hotbarOrder.includes(+t)?`<em class="inv-key">${hotbarOrder.indexOf(+t)+1}</em>`:''}</button>`).join('');document.getElementById('invPickaxe').textContent=hasPickaxe?'⛏ 石镐已拥有':'未制作石镐';document.getElementById('invSelected').textContent=itemDefs[selected]?.name||'空手';
   }
   function openInventory(fromPause=false){
-    if(!started)return;stopMining();inventoryReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('inventoryPanel').classList.remove('hidden');document.exitPointerLock?.();updateInventoryPanel();
+    if(!started)return;stopMining();stopPlacing();inventoryReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('inventoryPanel').classList.remove('hidden');document.exitPointerLock?.();updateInventoryPanel();
   }
   function closeInventory(){document.getElementById('inventoryPanel').classList.add('hidden');if(inventoryReturnToPause){inventoryReturnToPause=false;paused=true;document.getElementById('pausePanel').classList.remove('hidden');updatePauseUI();}else{paused=false;canvas.focus();canvas.requestPointerLock?.();}}
   function inventoryToCraft(){document.getElementById('inventoryPanel').classList.add('hidden');inventoryReturnToPause=false;paused=false;toggleCraft(true);}
@@ -897,7 +900,7 @@
   function cycleDecorWallTheme(){recordDecorHistory();decorWallThemes[decorFloor]=(decorWallThemes[decorFloor]+1)%decorWallThemeNames.length;saveGame();updateDecorEditor();document.getElementById('decorStatus').textContent=`已应用${decorWallThemeNames[decorWallThemes[decorFloor]]}墙面`;}
   function saveDecorLayoutSnapshot(){savedDecorLayout=decorSnapshot();saveGame();document.getElementById('decorStatus').textContent='当前一楼与阁楼布局已保存';updateDecorEditor();}
   function loadDecorLayoutSnapshot(){if(!savedDecorLayout)return;recordDecorHistory();restoreDecorSnapshot(savedDecorLayout);document.getElementById('decorStatus').textContent='已恢复保存的装修布局';}
-  function openDecoration(fromPause=false){if(!isInHouse()){if(fromPause)document.getElementById('pauseSaveState').textContent='请先回到小屋再进行装修';else toast('请先回到小屋再进行装修');return;}stopMining();decorReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;decorFloor=player.y>=4?1:0;decorTool=null;selectedDecorId=null;decorSelection.clear();decorMoveMode=false;decorMultiMode=false;decorClearArmed=false;document.getElementById('pausePanel').classList.add('hidden');document.getElementById('decorPanel').classList.remove('hidden');document.exitPointerLock?.();if(!document.getElementById('decorCatalog').children.length)document.getElementById('decorCatalog').innerHTML=Object.entries(decorDefs).map(([t,d])=>`<button class="decor-item" data-type="${t}"><i>${d.icon}</i>${d.name}</button>`).join('');if(!document.getElementById('decorPalette').children.length)document.getElementById('decorPalette').innerHTML=decorColors.map((c,i)=>`<button class="decor-swatch" data-color="${i}" style="background:rgb(${c.map(v=>Math.round(v*255))})"></button>`).join('');document.getElementById('decorStatus').textContent='请选择一件家具';updateDecorEditor();}
+  function openDecoration(fromPause=false){if(!isInHouse()){if(fromPause)document.getElementById('pauseSaveState').textContent='请先回到小屋再进行装修';else toast('请先回到小屋再进行装修');return;}stopMining();stopPlacing();decorReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;decorFloor=player.y>=4?1:0;decorTool=null;selectedDecorId=null;decorSelection.clear();decorMoveMode=false;decorMultiMode=false;decorClearArmed=false;document.getElementById('pausePanel').classList.add('hidden');document.getElementById('decorPanel').classList.remove('hidden');document.exitPointerLock?.();if(!document.getElementById('decorCatalog').children.length)document.getElementById('decorCatalog').innerHTML=Object.entries(decorDefs).map(([t,d])=>`<button class="decor-item" data-type="${t}"><i>${d.icon}</i>${d.name}</button>`).join('');if(!document.getElementById('decorPalette').children.length)document.getElementById('decorPalette').innerHTML=decorColors.map((c,i)=>`<button class="decor-swatch" data-color="${i}" style="background:rgb(${c.map(v=>Math.round(v*255))})"></button>`).join('');document.getElementById('decorStatus').textContent='请选择一件家具';updateDecorEditor();}
   function closeDecoration(){document.getElementById('decorPanel').classList.add('hidden');if(decorReturnToPause){decorReturnToPause=false;paused=true;document.getElementById('pausePanel').classList.remove('hidden');updatePauseUI();}else{paused=false;canvas.focus();canvas.requestPointerLock?.();}}
   function updateStorageUI(){
     const list=document.getElementById('storageList');list.innerHTML=Object.entries(itemDefs).map(([t,d])=>`<div class="storage-row" data-type="${t}"><i class="storage-icon" style="background:${d.color}"></i><div><b>${d.name}</b><small>背包 ${stock[t]||0} · 箱内 ${chestStock[t]||0}</small></div><button data-move="in" ${(stock[t]||0)<=0?'disabled':''}>存全部</button><button data-move="out" ${(chestStock[t]||0)<=0?'disabled':''}>取全部</button></div>`).join('');
@@ -910,7 +913,7 @@
     for(const t of Object.keys(itemDefs).map(Number)){if(dir==='in'){const move=Math.min(stock[t]||0,9999-(chestStock[t]||0));stock[t]-=move;chestStock[t]=(chestStock[t]||0)+move;}else{const move=Math.min(chestStock[t]||0,itemCap(t)-(stock[t]||0));chestStock[t]-=move;stock[t]=(stock[t]||0)+move;}}
     updateInventory();updateCraftUI();updateStorageUI();tone(dir==='in'?240:460,.09,'square');saveGame();
   }
-  function openStorage(){stopMining();if(!chestOpened||chestDistance()>2.8||!isInHouse())return;paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('storagePanel').classList.remove('hidden');document.exitPointerLock?.();updateStorageUI();}
+  function openStorage(){stopMining();stopPlacing();if(!chestOpened||chestDistance()>2.8||!isInHouse())return;paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('storagePanel').classList.remove('hidden');document.exitPointerLock?.();updateStorageUI();}
   function closeStorage(){document.getElementById('storagePanel').classList.add('hidden');paused=false;canvas.focus();canvas.requestPointerLock?.();}
   const recipes={lamp:{cost:{2:3,3:2},gain:{5:1},label:'灯笼制作完成'},brick:{cost:{3:3},gain:{4:2},label:'砖块烧制完成'},sword:{cost:{2:3,3:2},gain:{6:1},unique:6,label:'获得石剑 · 伤害提升'},pickaxe:{cost:{2:3,3:3},unlock:'pickaxe',label:'获得石镐 · 岩石挖掘加速'},potion:{cost:{7:2,1:1},heal:5,label:'生命已完全恢复'},fish:{cost:{8:1,2:1},heal:2,label:'烤鱼完成 · 恢复 2 颗生命'}};
   function canUseChestMaterials(){return chestOpened&&isInHouse();}
@@ -928,7 +931,7 @@
     burst(name==='lamp'?'#ffbd35':name==='potion'?'#e85868':name==='fish'?'#70c9e4':name==='pickaxe'?'#aeb9b5':'#c5d6d0');tone(520,.07,'square');setTimeout(()=>tone(720,.1,'sine'),65);saveGame();
   }
   function toggleCraft(force){
-    stopMining();const panel=document.getElementById('craftPanel'),open=force===undefined?panel.classList.contains('hidden'):force;
+    stopMining();stopPlacing();const panel=document.getElementById('craftPanel'),open=force===undefined?panel.classList.contains('hidden'):force;
     panel.classList.toggle('hidden',!open);paused=open;Object.keys(keys).forEach(k=>keys[k]=false);
     if(open){document.exitPointerLock?.();document.getElementById('craftMessage').textContent='';updateCraftUI();}else if(started){canvas.focus();canvas.requestPointerLock?.();}
   }
@@ -939,7 +942,7 @@
     if(!quiet){toast(`🏆 成就解锁 · ${name}`);tone(740,.09,'sine');setTimeout(()=>tone(920,.14,'sine'),90);}saveGame();
   }
   function renderStory(){const ids=[...storyUnlocked].sort((a,b)=>a-b),pos=Math.max(0,ids.indexOf(storyPage)),id=ids[pos]??0,e=storyEntries[id]||storyEntries[0];storyPage=id;document.getElementById('storyEyebrow').textContent=`归家的灯火 · 第${id+1}章`;document.getElementById('storyTitle').textContent=e.title;document.getElementById('storyBody').textContent=e.body;document.getElementById('storyQuote').textContent=`“${e.quote}”`;document.getElementById('storyPrevBtn').disabled=pos<=0;document.getElementById('storyNextBtn').disabled=pos>=ids.length-1;document.getElementById('storyCount').textContent=`已收录 ${ids.length} / ${storyEntries.length} 篇 · 第 ${pos+1} 页`;}
-  function showStory(id=storyPage,fromPause=false){if(!storyUnlocked.has(id))storyUnlocked.add(id);storyPage=id;storyReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;stopMining();Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('storyPanel').classList.remove('hidden');document.exitPointerLock?.();renderStory();}
+  function showStory(id=storyPage,fromPause=false){if(!storyUnlocked.has(id))storyUnlocked.add(id);storyPage=id;storyReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;stopMining();stopPlacing();Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('storyPanel').classList.remove('hidden');document.exitPointerLock?.();renderStory();}
   function closeStory(){document.getElementById('storyPanel').classList.add('hidden');if(storyQueue.length){const next=storyQueue.shift();showStory(next,storyReturnToPause);return;}if(storyReturnToPause){storyReturnToPause=false;paused=true;document.getElementById('pausePanel').classList.remove('hidden');updatePauseUI();}else{paused=false;canvas.focus();canvas.requestPointerLock?.();}}
   function turnStory(dir){const ids=[...storyUnlocked].sort((a,b)=>a-b),i=ids.indexOf(storyPage),next=ids[Math.max(0,Math.min(ids.length-1,i+dir))];if(next!==undefined){storyPage=next;renderStory();}}
   function unlockStory(id,show=true){if(storyUnlocked.has(id))return;storyUnlocked.add(id);storyPage=id;saveGame();if(show&&started){if(!paused)showStory(id,false);else storyQueue.push(id);}}
@@ -970,7 +973,7 @@
     const day=worldTime>=6&&worldTime<18.5,unlocked=landmarkUnlocked(waypoint),travel=document.getElementById('mapTravelBtn');travel.disabled=!day||!unlocked;travel.textContent=!unlocked?'目标尚未发现':day?'快速前往当前目标':'夜间无法快速旅行';document.getElementById('mapSelection').textContent=`当前导航：${target.icon} ${unlocked?target.name:'未知地点'}`;
   }
   function openWorldMap(fromPause=false){
-    stopMining();if(!started)return;mapReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('mapPanel').classList.remove('hidden');document.exitPointerLock?.();drawWorldMap();
+    stopMining();stopPlacing();if(!started)return;mapReturnToPause=fromPause||!document.getElementById('pausePanel').classList.contains('hidden');paused=true;Object.keys(keys).forEach(k=>keys[k]=false);document.getElementById('pausePanel').classList.add('hidden');document.getElementById('mapPanel').classList.remove('hidden');document.exitPointerLock?.();drawWorldMap();
   }
   function closeWorldMap(){
     document.getElementById('mapPanel').classList.add('hidden');if(mapReturnToPause){mapReturnToPause=false;paused=true;document.getElementById('pausePanel').classList.remove('hidden');updatePauseUI();}else{paused=false;canvas.focus();canvas.requestPointerLock?.();}
@@ -990,7 +993,7 @@
     document.querySelectorAll('.ach').forEach(a=>a.classList.toggle('unlocked',achievements.has(a.dataset.ach)));document.querySelectorAll('.avatar-swatch').forEach(b=>b.classList.toggle('selected',+b.dataset.style===avatarStyle));document.getElementById('shoulderBtn').textContent=cameraShoulder>0?'肩位：右侧':'肩位：左侧';document.getElementById('qualityBtn').textContent=`画质：${['流畅','均衡','精美'][graphicsMode]}`;document.getElementById('weatherFxBtn').textContent=`天气粒子：${weatherFx?'开':'关'}`;syncControlSettings();document.querySelectorAll('.waypoint-btn').forEach(b=>{const unlocked=landmarkUnlocked(b.dataset.waypoint);b.classList.toggle('selected',b.dataset.waypoint===waypoint);b.querySelector('small').textContent=unlocked?'已发现':'未发现';});const travel=document.getElementById('travelBtn'),travelReady=landmarkUnlocked(waypoint)&&worldTime>=6&&worldTime<18.5;travel.disabled=!travelReady;travel.textContent=!landmarkUnlocked(waypoint)?'尚未发现，无法快速旅行':worldTime<6||worldTime>=18.5?'夜间无法快速旅行':'白天快速前往';document.getElementById('modeBtn').textContent=adventureMode?'☠ 夜间生物：开':'☘ 和平模式：开';updateFlightUI();document.getElementById('pauseUndoBtn').disabled=!buildHistory.length;
   }
   function openPause(){
-    stopMining();if(!started||document.getElementById('sleepFade').classList.contains('asleep'))return;paused=true;Object.keys(keys).forEach(k=>keys[k]=false);
+    stopMining();stopPlacing();if(!started||document.getElementById('sleepFade').classList.contains('asleep'))return;paused=true;Object.keys(keys).forEach(k=>keys[k]=false);
     document.getElementById('pausePanel').classList.remove('hidden');pauseOpenedAt=performance.now();document.getElementById('pauseSaveState').textContent='';updatePauseUI();saveGame();document.exitPointerLock?.();
   }
   function closePause(){
@@ -1227,7 +1230,7 @@
     try{const json=saveGame(),blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`minicraft-backup-day-${dayCount}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);document.getElementById('pauseSaveState').textContent='备份文件已导出';}catch(e){document.getElementById('pauseSaveState').textContent='当前浏览器无法导出备份';}
   }
   function importSaveFile(file){
-    if(!file)return;const reader=new FileReader();reader.onload=()=>{worldGeneration++;stopMining();const ok=loadGame(String(reader.result||''));if(!ok){document.getElementById('pauseSaveState').textContent='导入失败：文件无效或已损坏';return;}saveGame();document.getElementById('cameraBtn').textContent=['◎','◉','◍'][cameraMode];document.getElementById('crosshair').style.opacity=cameraMode===2?'0':'1';updateInventory();updateStorageUI();updateCraftUI();updatePauseUI();updateSky();updateHud();drawMinimap();closePause();setTimeout(()=>toast('存档备份已成功导入'),80);};reader.onerror=()=>document.getElementById('pauseSaveState').textContent='无法读取所选文件';reader.readAsText(file);
+    if(!file)return;const reader=new FileReader();reader.onload=()=>{worldGeneration++;stopMining();stopPlacing();const ok=loadGame(String(reader.result||''));if(!ok){document.getElementById('pauseSaveState').textContent='导入失败：文件无效或已损坏';return;}saveGame();document.getElementById('cameraBtn').textContent=['◎','◉','◍'][cameraMode];document.getElementById('crosshair').style.opacity=cameraMode===2?'0':'1';updateInventory();updateStorageUI();updateCraftUI();updatePauseUI();updateSky();updateHud();drawMinimap();closePause();setTimeout(()=>toast('存档备份已成功导入'),80);};reader.onerror=()=>document.getElementById('pauseSaveState').textContent='无法读取所选文件';reader.readAsText(file);
   }
   function toast(text){toastEl.textContent=text;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1800);}
   let audioCtx;
@@ -1262,15 +1265,15 @@
     if(/^Digit[1-9]$/.test(e.code))select(hotbarOrder[+e.code.slice(5)-1]);
   });
   addEventListener('keyup',e=>keys[e.code]=false);
-  addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);stopMining();});
+  addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);stopMining();stopPlacing();});
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('mousedown',e=>{
     if(!started)return;
     if(document.pointerLockElement!==canvas){if(canvas.requestPointerLock)canvas.requestPointerLock();dragging=true;lastMouse=[e.clientX,e.clientY];return;}
-    if(e.button===0)beginMining();if(e.button===1){e.preventDefault();pickTargetBlock();}if(e.button===2)place();
+    if(e.button===0)beginMining();if(e.button===1){e.preventDefault();pickTargetBlock();}if(e.button===2)beginPlacing();
   });
   let dragging=false,lastMouse=[0,0];
-  addEventListener('mouseup',e=>{dragging=false;if(e.button===0)stopMining();});
+  addEventListener('mouseup',e=>{dragging=false;if(e.button===0)stopMining();if(e.button===2)stopPlacing();});
   addEventListener('mousemove',e=>{
     if(!started)return;
     let mx=0,my=0;if(document.pointerLockElement===canvas){mx=e.movementX;my=e.movementY;}else if(dragging){mx=e.clientX-lastMouse[0];my=e.clientY-lastMouse[1];lastMouse=[e.clientX,e.clientY];}
@@ -1367,7 +1370,10 @@
   document.getElementById('touchMine').addEventListener('pointerup',e=>{e.preventDefault();stopMining();});
   document.getElementById('touchMine').addEventListener('pointercancel',stopMining);
   document.getElementById('touchMine').addEventListener('pointerleave',stopMining);
-  document.getElementById('touchPlace').addEventListener('pointerdown',e=>{e.preventDefault();place();});
+  document.getElementById('touchPlace').addEventListener('pointerdown',e=>{e.preventDefault();beginPlacing();});
+  document.getElementById('touchPlace').addEventListener('pointerup',e=>{e.preventDefault();stopPlacing();});
+  document.getElementById('touchPlace').addEventListener('pointercancel',stopPlacing);
+  document.getElementById('touchPlace').addEventListener('pointerleave',stopPlacing);
   let touchLook=null,pinchDistance=0,pinchCamera=4;
   canvas.addEventListener('touchstart',e=>{if(!started)return;if(e.touches.length===2&&cameraMode){pinchDistance=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchCamera=cameraDistance;touchLook=null;}else if(e.touches.length===1)touchLook=[e.touches[0].clientX,e.touches[0].clientY];},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&cameraMode&&pinchDistance){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);cameraDistance=Math.max(2.2,Math.min(6,pinchCamera+(pinchDistance-d)*.012));e.preventDefault();return;}if(!touchLook||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-touchLook[0],dy=t.clientY-touchLook[1];player.yaw+=dx*.008*mouseSensitivity;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*.006*mouseSensitivity));touchLook=[t.clientX,t.clientY];e.preventDefault();},{passive:false});
@@ -1376,5 +1382,5 @@
   setInterval(()=>{if(started&&!paused)saveGame();},10000);addEventListener('pagehide',()=>{if(started)saveGame();});
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1ce8b4dfac00a83',t:'MTc4NDM0Njg1Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1ce9dd1ca074b39',t:'MTc4NDM0NzYxNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
