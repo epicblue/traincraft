@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import re
 import time
@@ -38,6 +39,8 @@ class Room:
         self.host: Client | None = None
         self.world: dict[str, int] = {}
         self.shared: dict[str, Any] = {}
+        self.password_hash = ""
+        self.guest_can_build = True
         self.save_task: asyncio.Task | None = None
         self.load()
 
@@ -50,6 +53,8 @@ class Room:
             data = json.loads(self.path.read_text("utf-8"))
             self.world = {str(k): int(v) for k, v in data.get("world", {}).items()}
             self.shared = data.get("shared", {}) if isinstance(data.get("shared"), dict) else {}
+            self.password_hash = str(data.get("password_hash", ""))
+            self.guest_can_build = bool(data.get("guest_can_build", True))
             print(f"[room {self.id}] loaded {len(self.world)} blocks")
         except FileNotFoundError:
             pass
@@ -67,7 +72,7 @@ class Room:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(
-                safe_json({"world": self.world, "shared": self.shared, "updated": time.time()}),
+                safe_json({"world": self.world, "shared": self.shared, "password_hash": self.password_hash, "guest_can_build": self.guest_can_build, "updated": time.time()}),
                 "utf-8",
             )
             tmp.replace(self.path)
@@ -107,7 +112,7 @@ class Room:
         if self.host is None:
             self.host = client
         role = "host" if client is self.host else "guest"
-        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients)})
+        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build})
         await self.broadcast({"kind": "hello", "name": client.name}, exclude=client)
         if self.world:
             await self.send(client, self.snapshot())
@@ -123,7 +128,7 @@ class Room:
         if self.host is client:
             self.host = self.clients[0] if self.clients else None
             if self.host:
-                await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients)})
+                await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build})
         print(f"[room {self.id}] {client.name} left")
 
     async def process(self, client: Client, payload: dict[str, Any]) -> None:
@@ -153,6 +158,21 @@ class Room:
             await self.broadcast({"kind": "hello", "name": client.name}, exclude=client)
             return
 
+        if kind == "permission":
+            if client is self.host:
+                self.guest_can_build = bool(payload.get("canBuild", True))
+                self.schedule_save()
+                await self.broadcast({"kind": "permission", "canBuild": self.guest_can_build})
+            return
+
+        if kind == "kick":
+            if client is self.host:
+                for other in list(self.clients):
+                    if other is not self.host:
+                        await self.send(other, {"kind": "kicked", "message": "主机已将你移出房间"})
+                        await other.ws.close(code=4004, message=b"kicked")
+            return
+
         if kind == "snapshot":
             if client is not self.host:
                 await self.send(client, {"kind": "error", "message": "只有主机可以覆盖完整世界"})
@@ -174,6 +194,9 @@ class Room:
             return
 
         if kind == "block":
+            if client is not self.host and not self.guest_can_build:
+                await self.send(client, {"kind": "permission", "canBuild": False})
+                return
             try:
                 x, y, z, block = (int(payload[k]) for k in ("x", "y", "z", "t"))
             except Exception:
@@ -190,6 +213,9 @@ class Room:
             return
 
         if kind == "shared":
+            if client is not self.host and not self.guest_can_build:
+                await self.send(client, {"kind": "permission", "canBuild": False})
+                return
             self.shared = {k: v for k, v in payload.items() if k != "kind"}
             self.schedule_save()
             await self.broadcast(payload, exclude=client)
@@ -213,6 +239,12 @@ async def index(request: web.Request) -> web.FileResponse:
     return web.FileResponse(request.app["root"] / "index.html")
 
 
+async def rooms_api(request: web.Request) -> web.Response:
+    rooms: dict[str, Room] = request.app["rooms"]
+    payload = [{"id": r.id, "players": len(r.clients), "blocks": len(r.world), "locked": bool(r.password_hash)} for r in rooms.values()]
+    return web.json_response({"rooms": payload}, headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
+
+
 async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
     room_id = request.query.get("room", "home").strip()
     name = request.query.get("name", "旅人").strip()[:18] or "旅人"
@@ -224,7 +256,23 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
         return ws
 
     rooms: dict[str, Room] = request.app["rooms"]
-    room = rooms.setdefault(room_id, Room(room_id, request.app["data_dir"]))
+    room = rooms.get(room_id)
+    if room is None:
+        room = Room(room_id, request.app["data_dir"])
+        rooms[room_id] = room
+    password = request.query.get("password", "")[:64]
+    supplied_hash = hashlib.sha256(password.encode("utf-8")).hexdigest() if password else ""
+    if room.password_hash and supplied_hash != room.password_hash:
+        await ws.send_str(safe_json({"kind": "error", "message": "房间密码错误"}))
+        await ws.close(code=4005, message=b"wrong password")
+        return ws
+    if not room.password_hash and password:
+        if room.clients:
+            await ws.send_str(safe_json({"kind": "error", "message": "该房间创建时未设置密码，请将密码留空"}))
+            await ws.close(code=4006, message=b"unexpected password")
+            return ws
+        room.password_hash = supplied_hash
+        room.schedule_save()
     client = Client(ws=ws, name=name)
     if not await room.add(client):
         return ws
@@ -255,6 +303,7 @@ def make_app(root: Path, data_dir: Path) -> web.Application:
     app["rooms"] = {}
     app.router.add_get("/", index)
     app.router.add_get("/index.html", index)
+    app.router.add_get("/api/rooms", rooms_api)
     app.router.add_get("/ws", websocket_handler)
     return app
 
