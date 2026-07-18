@@ -80,7 +80,7 @@ class Room:
                 now = time.monotonic()
                 quiet_for = now - self.last_dirty
                 dirty_for = now - self.dirty_since
-                if quiet_for < 2.0 and dirty_for < 10.0:
+                if quiet_for < 60.0 and dirty_for < 60.0:
                     continue
                 self._save_now()
                 await self.broadcast({"kind": "serverSaved", "at": time.time()})
