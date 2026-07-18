@@ -118,6 +118,7 @@ class Room:
             await self.send(client, self.snapshot())
         elif self.host:
             await self.send(self.host, {"kind": "requestSnapshot"})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else ""})
         print(f"[room {self.id}] {client.name} joined as {role}")
         return True
 
@@ -129,6 +130,7 @@ class Room:
             self.host = self.clients[0] if self.clients else None
             if self.host:
                 await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else ""})
         print(f"[room {self.id}] {client.name} left")
 
     async def process(self, client: Client, payload: dict[str, Any]) -> None:
@@ -191,6 +193,32 @@ class Room:
             self.shared = {k: v for k, v in payload.items() if k not in {"kind", "world"}}
             self.schedule_save()
             await self.broadcast(self.snapshot(), exclude=client)
+            return
+
+        if kind == "blocks":
+            if client is not self.host and not self.guest_can_build:
+                await self.send(client, {"kind": "permission", "canBuild": False})
+                return
+            incoming = payload.get("items")
+            if not isinstance(incoming, list):
+                return
+            clean = []
+            for item in incoming[:512]:
+                try:
+                    x, y, z, block = (int(item[k]) for k in ("x", "y", "z", "t"))
+                except Exception:
+                    continue
+                if not (0 <= x < 64 and 0 <= z < 64 and 0 <= y <= 128 and 0 <= block <= 64):
+                    continue
+                key = f"{x},{y},{z}"
+                if block:
+                    self.world[key] = block
+                else:
+                    self.world.pop(key, None)
+                clean.append({"x": x, "y": y, "z": z, "t": block})
+            if clean:
+                self.schedule_save()
+                await self.broadcast({"kind": "blocks", "items": clean}, exclude=client)
             return
 
         if kind == "block":
