@@ -276,9 +276,22 @@ class Room:
             if client is not self.host and not self.guest_can_build:
                 await self.send(client, {"kind": "permission", "canBuild": False})
                 return
-            self.shared = {k: v for k, v in payload.items() if k != "kind"}
+            clean = {k: v for k, v in payload.items() if k != "kind"}
+            if client is not self.host:
+                for key in ("worldTime", "dayCount", "raining", "weatherTimer", "adventureMode"):
+                    clean.pop(key, None)
+            self.shared.update(clean)
             self.schedule_save()
-            await self.broadcast(payload, exclude=client)
+            await self.broadcast({"kind": "shared", **clean}, exclude=client)
+            return
+
+        if kind == "environment":
+            if client is not self.host:
+                return
+            clean = {k: payload.get(k) for k in ("worldTime", "dayCount", "raining", "weatherTimer", "adventureMode", "cat")}
+            self.shared.update(clean)
+            self.schedule_save()
+            await self.broadcast({"kind": "environment", **clean}, exclude=client)
             return
 
         if kind == "syncRequest":
