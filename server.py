@@ -30,6 +30,7 @@ class Client:
     ws: web.WebSocketResponse
     name: str
     id: str = field(default_factory=lambda: secrets.token_hex(4))
+    can_build: bool = True
     chunks: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -143,14 +144,15 @@ class Room:
         self.clients.append(client)
         if self.host is None:
             self.host = client
+        client.can_build = client is self.host or self.guest_can_build
         role = "host" if client is self.host else "guest"
-        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build, "selfId": client.id})
+        await self.send(client, {"kind": "welcome", "role": role, "room": self.id, "clients": len(self.clients), "canBuild": client.can_build, "selfId": client.id})
         await self.broadcast({"kind": "hello", "name": client.name, "clientId": client.id}, exclude=client)
         if self.world:
             await self.send(client, self.snapshot())
         elif self.host:
             await self.send(self.host, {"kind": "requestSnapshot"})
-        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name} for c in self.clients]})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name, "canBuild": c.can_build, "role": "host" if c is self.host else "guest"} for c in self.clients]})
         print(f"[room {self.id}] {client.name} joined as {role}")
         return True
 
@@ -161,8 +163,9 @@ class Room:
         if self.host is client:
             self.host = self.clients[0] if self.clients else None
             if self.host:
+                self.host.can_build = True
                 await self.send(self.host, {"kind": "welcome", "role": "host", "room": self.id, "clients": len(self.clients), "canBuild": self.guest_can_build, "selfId": self.host.id})
-        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name} for c in self.clients]})
+        await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name if self.host else "", "players": [{"id": c.id, "name": c.name, "canBuild": c.can_build, "role": "host" if c is self.host else "guest"} for c in self.clients]})
         print(f"[room {self.id}] {client.name} left")
 
     async def process(self, client: Client, payload: dict[str, Any]) -> None:
@@ -194,15 +197,23 @@ class Room:
 
         if kind == "permission":
             if client is self.host:
-                self.guest_can_build = bool(payload.get("canBuild", True))
+                allowed = bool(payload.get("canBuild", True))
+                target_id = str(payload.get("clientId", ""))
+                targets = [c for c in self.clients if c is not self.host and (not target_id or c.id == target_id)]
+                if not target_id:
+                    self.guest_can_build = allowed
+                for target in targets:
+                    target.can_build = allowed
+                    await self.send(target, {"kind": "permission", "canBuild": allowed, "clientId": target.id})
                 self.schedule_save()
-                await self.broadcast({"kind": "permission", "canBuild": self.guest_can_build})
+                await self.broadcast({"kind": "roomInfo", "clients": len(self.clients), "host": self.host.name, "players": [{"id": c.id, "name": c.name, "canBuild": c.can_build, "role": "host" if c is self.host else "guest"} for c in self.clients]})
             return
 
         if kind == "kick":
             if client is self.host:
+                target_id = str(payload.get("clientId", ""))
                 for other in list(self.clients):
-                    if other is not self.host:
+                    if other is not self.host and (not target_id or other.id == target_id):
                         await self.send(other, {"kind": "kicked", "message": "主机已将你移出房间"})
                         await other.ws.close(code=4004, message=b"kicked")
             return
@@ -228,7 +239,7 @@ class Room:
             return
 
         if kind == "blocks":
-            if client is not self.host and not self.guest_can_build:
+            if client is not self.host and not client.can_build:
                 await self.send(client, {"kind": "permission", "canBuild": False})
                 return
             incoming = payload.get("items")
@@ -254,7 +265,7 @@ class Room:
             return
 
         if kind == "block":
-            if client is not self.host and not self.guest_can_build:
+            if client is not self.host and not client.can_build:
                 await self.send(client, {"kind": "permission", "canBuild": False})
                 return
             try:
@@ -273,7 +284,7 @@ class Room:
             return
 
         if kind == "shared":
-            if client is not self.host and not self.guest_can_build:
+            if client is not self.host and not client.can_build:
                 await self.send(client, {"kind": "permission", "canBuild": False})
                 return
             clean = {k: v for k, v in payload.items() if k != "kind"}
