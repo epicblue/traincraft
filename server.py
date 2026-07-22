@@ -251,7 +251,7 @@ class Room:
                     x, y, z, block = (int(item[k]) for k in ("x", "y", "z", "t"))
                 except Exception:
                     continue
-                if not (0 <= x < 64 and 0 <= z < 64 and 0 <= y <= 128 and 0 <= block <= 64):
+                if not (0 <= x < 64 and 0 <= z < 64 and -2 <= y <= 128 and 0 <= block <= 64):
                     continue
                 key = f"{x},{y},{z}"
                 if block:
@@ -272,7 +272,7 @@ class Room:
                 x, y, z, block = (int(payload[k]) for k in ("x", "y", "z", "t"))
             except Exception:
                 return
-            if not (0 <= x < 64 and 0 <= z < 64 and 0 <= y <= 128 and 0 <= block <= 64):
+            if not (0 <= x < 64 and 0 <= z < 64 and -2 <= y <= 128 and 0 <= block <= 64):
                 return
             key = f"{x},{y},{z}"
             if block:
