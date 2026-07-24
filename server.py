@@ -299,7 +299,7 @@ class Room:
         if kind == "environment":
             if client is not self.host:
                 return
-            clean = {k: payload.get(k) for k in ("worldTime", "dayCount", "raining", "weatherTimer", "adventureMode", "cat")}
+            clean = {k: payload.get(k) for k in ("worldTime", "dayCount", "raining", "weatherTimer", "adventureMode", "cat", "trackTrain")}
             self.shared.update(clean)
             self.schedule_save()
             await self.broadcast({"kind": "environment", **clean}, exclude=client)
