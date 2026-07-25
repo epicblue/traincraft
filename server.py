@@ -18,7 +18,7 @@ from aiohttp import WSMsgType, web
 
 ROOM_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 MAX_CLIENTS = 8
-MAX_MESSAGE = 4 * 1024 * 1024
+MAX_MESSAGE = 32 * 1024 * 1024
 
 
 def safe_json(data: Any) -> str:
@@ -66,6 +66,122 @@ class Room:
             pass
         except Exception as exc:
             print(f"[room {self.id}] failed to load: {exc}")
+        try:
+            loaded_version = int(self.shared.get("worldVersion", 0) or 0)
+        except (TypeError, ValueError):
+            loaded_version = 0
+        if self.world and loaded_version < 13:
+            self._migrate_legacy_world()
+            self._save_now()
+
+    @staticmethod
+    def _underground_type(x: int, y: int, z: int) -> int:
+        depth = max(1, -y)
+        h = (((x + 17) * 73856093) & 0xFFFFFFFF) ^ (((z + 31) * 19349663) & 0xFFFFFFFF) ^ (((depth + 7) * 83492791) & 0xFFFFFFFF)
+        h &= 0xFFFFFFFF
+        if (h + depth * 19) % 53 == 0 or (depth >= 7 and (h >> 4) % 41 == 0):
+            return 20
+        if depth <= 2:
+            return 3 if h % 7 == 0 else 35
+        if depth <= 5:
+            return 35 if h % 5 == 0 else 3
+        return 35 if h % 19 == 0 else 3
+
+    @staticmethod
+    def _outer_hash(x: int, z: int) -> int:
+        return ((((x + 41) * 1103515245) & 0xFFFFFFFF) ^ (((z + 73) * 12345) & 0xFFFFFFFF)) & 0xFFFFFFFF
+
+    def _migrate_legacy_world(self) -> None:
+        def get(x: int, y: int, z: int) -> int:
+            return self.world.get(f"{x},{y},{z}", 0)
+
+        def set_block(x: int, y: int, z: int, block: int) -> None:
+            key = f"{x},{y},{z}"
+            if block:
+                self.world[key] = block
+            else:
+                self.world.pop(key, None)
+
+        # Open the former 64x64 hedge so the old world connects to the frontier.
+        for i in range(64):
+            if get(63, 1, i) == 6:
+                set_block(63, 1, i, 0)
+            if get(i, 1, 63) == 6:
+                set_block(i, 1, 63, 0)
+
+        for x in range(128):
+            for z in range(128):
+                outer = x >= 64 or z >= 64
+                if outer and not get(x, 0, z):
+                    set_block(x, 0, z, 1)
+                if outer:
+                    for y in range(-10, 0):
+                        if not get(x, y, z):
+                            set_block(x, y, z, self._underground_type(x, y, z))
+                else:
+                    if get(x, -2, z) == 36:
+                        set_block(x, -2, z, self._underground_type(x, -2, z))
+                    for y in range(-3, -11, -1):
+                        if not get(x, y, z):
+                            set_block(x, y, z, self._underground_type(x, y, z))
+                if not get(x, -11, z):
+                    set_block(x, -11, z, 36)
+
+        # Surface biomes and water bodies mirror the browser-side migration.
+        for x in range(1, 127):
+            for z in range(1, 127):
+                if x < 64 and z < 64:
+                    continue
+                current = get(x, 0, z)
+                if not current or current == 1:
+                    h = self._outer_hash(x, z)
+                    surface = 21 if x >= 96 and z < 45 else 22 if z >= 96 else 3 if h % 37 == 0 else 1
+                    set_block(x, 0, z, surface)
+        for x in range(75, 100):
+            for z in range(69, 94):
+                if ((x - 87) ** 2 + (z - 81) ** 2) ** 0.5 < 10.2:
+                    set_block(x, 0, z, 18)
+        for x in range(108, 123):
+            for z in range(104, 120):
+                if ((x - 115) ** 2 + (z - 111) ** 2) ** 0.5 < 5.4:
+                    set_block(x, 0, z, 18)
+        for z in range(64, 127):
+            set_block(11, 0, z, 11); set_block(12, 0, z, 11)
+        for x in range(56, 113):
+            set_block(x, 0, 60, 11); set_block(x, 0, 61, 11)
+        for z in range(42, 69):
+            set_block(103, 0, z, 11); set_block(104, 0, z, 11)
+
+        def tree(x: int, z: int, snow: bool) -> None:
+            height = 2 + self._outer_hash(x, z) % 3
+            for y in range(1, height + 1):
+                if not get(x, y, z): set_block(x, y, z, 5)
+            for dx in range(-2, 3):
+                for dz in range(-2, 3):
+                    for dy in range(3):
+                        if abs(dx) + abs(dz) + dy < 5 and not get(x + dx, height + dy, z + dz):
+                            set_block(x + dx, height + dy, z + dz, 6)
+            if snow and get(x, height + 2, z) == 6:
+                set_block(x, height + 3, z, 21)
+
+        for x in range(66, 125, 4):
+            for z in range(4, 125, 4):
+                ground, h = get(x, 0, z), self._outer_hash(x, z)
+                if ground in (1, 21) and h % 7 == 0 and not get(x, 1, z) and abs(z - 60) > 2:
+                    tree(x, z, ground == 21)
+                elif ground in (22, 3) and h % 43 == 0:
+                    set_block(x, 1, z, 3 if h % 2 else 20)
+        for n, (cx, cy, cz) in enumerate(((76, 11, 52), (103, 13, 73), (112, 10, 28))):
+            for dx in range(5 + n % 2):
+                set_block(cx + dx, cy, cz, 14)
+            set_block(cx + 2, cy + 1, cz, 14)
+        for i in range(128):
+            if i % 7 != 3:
+                set_block(i, 1, 0, 6); set_block(i, 1, 127, 6)
+            if i % 8 != 4:
+                set_block(0, 1, i, 6); set_block(127, 1, i, 6)
+        self.shared.update({"worldVersion": 13, "worldWidth": 128, "undergroundDepth": 10})
+        print(f"[room {self.id}] migrated to 128x128 with 10 underground layers")
 
     def schedule_save(self) -> None:
         now = time.monotonic()
@@ -223,7 +339,7 @@ class Room:
                 await self.send(client, {"kind": "error", "message": "只有主机可以覆盖完整世界"})
                 return
             rows = payload.get("world")
-            if not isinstance(rows, list) or len(rows) > 30000:
+            if not isinstance(rows, list) or len(rows) > 300000:
                 return
             world: dict[str, int] = {}
             for row in rows:
@@ -234,6 +350,12 @@ class Room:
                         pass
             self.world = world
             self.shared = {k: v for k, v in payload.items() if k not in {"kind", "world"}}
+            try:
+                incoming_version = int(self.shared.get("worldVersion", 0) or 0)
+            except (TypeError, ValueError):
+                incoming_version = 0
+            if incoming_version < 13:
+                self._migrate_legacy_world()
             self.schedule_save()
             await self.broadcast(self.snapshot(), exclude=client)
             return
@@ -251,7 +373,7 @@ class Room:
                     x, y, z, block = (int(item[k]) for k in ("x", "y", "z", "t"))
                 except Exception:
                     continue
-                if not (0 <= x < 64 and 0 <= z < 64 and -2 <= y <= 128 and 0 <= block <= 64):
+                if not (0 <= x < 128 and 0 <= z < 128 and -11 <= y <= 128 and 0 <= block <= 64):
                     continue
                 key = f"{x},{y},{z}"
                 if block:
@@ -272,7 +394,7 @@ class Room:
                 x, y, z, block = (int(payload[k]) for k in ("x", "y", "z", "t"))
             except Exception:
                 return
-            if not (0 <= x < 64 and 0 <= z < 64 and -2 <= y <= 128 and 0 <= block <= 64):
+            if not (0 <= x < 128 and 0 <= z < 128 and -11 <= y <= 128 and 0 <= block <= 64):
                 return
             key = f"{x},{y},{z}"
             if block:
