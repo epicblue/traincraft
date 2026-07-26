@@ -311,6 +311,14 @@ class Room:
             await self.broadcast({"kind": "hello", "name": client.name, "clientId": client.id}, exclude=client)
             return
 
+        if kind == "catRide":
+            cat = dict(self.shared.get("cat", {})) if isinstance(self.shared.get("cat"), dict) else {}
+            cat["ridingTrain"] = bool(payload.get("ridingTrain", False))
+            self.shared["cat"] = cat
+            self.schedule_save()
+            await self.broadcast({"kind": "catRide", "ridingTrain": cat["ridingTrain"], "clientId": client.id}, exclude=client)
+            return
+
         if kind == "catCommand":
             mode = str(payload.get("mode", ""))
             if mode not in {"follow", "stay", "home"}:
