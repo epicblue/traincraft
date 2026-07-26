@@ -311,6 +311,22 @@ class Room:
             await self.broadcast({"kind": "hello", "name": client.name, "clientId": client.id}, exclude=client)
             return
 
+        if kind == "catCommand":
+            mode = str(payload.get("mode", ""))
+            if mode not in {"follow", "stay", "home"}:
+                return
+            cat = dict(self.shared.get("cat", {})) if isinstance(self.shared.get("cat"), dict) else {}
+            cat["mode"] = mode
+            try:
+                cat["stayX"] = max(0.0, min(128.0, float(payload.get("stayX", cat.get("stayX", 8.4)))))
+                cat["stayZ"] = max(0.0, min(128.0, float(payload.get("stayZ", cat.get("stayZ", 18.7)))))
+            except (TypeError, ValueError):
+                pass
+            self.shared["cat"] = cat
+            self.schedule_save()
+            await self.broadcast({"kind": "catCommand", "mode": mode, "stayX": cat.get("stayX"), "stayZ": cat.get("stayZ"), "clientId": client.id}, exclude=client)
+            return
+
         if kind == "permission":
             if client is self.host:
                 allowed = bool(payload.get("canBuild", True))
