@@ -555,6 +555,7 @@ def make_app(root: Path, data_dir: Path) -> web.Application:
     app.on_cleanup.append(cleanup_rooms)
     app.router.add_get("/", index)
     app.router.add_get("/index.html", index)
+    app.router.add_static("/assets/", root / "assets", show_index=False, follow_symlinks=False)
     app.router.add_get("/api/rooms", rooms_api)
     app.router.add_get("/ws", websocket_handler)
     return app
