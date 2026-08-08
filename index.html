@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>MINICRAFT · 林间小屋</title>
-  <link rel="stylesheet" href="assets/minicraft.css?v=30">
+  <link rel="stylesheet" href="assets/minicraft.css?v=31">
 </head>
 <body>
   <canvas id="starCanvas" aria-hidden="true"></canvas>
@@ -109,7 +109,7 @@
       <div class="travel-row"><button id="travelBtn">白天快速前往</button><button id="openMapBtn">▦ 查看大地图</button><button id="openInventoryBtn">▣ 背包</button><button id="openStoryBtn">📖 故事</button></div>
       <p class="section-label">画面设置</p><div class="settings-row"><button id="qualityBtn">画质：均衡</button><button id="weatherFxBtn">天气粒子：开</button><span class="perf-pill" id="perfText">60 FPS</span></div>
       <p class="section-label">控制与声音</p><div class="control-settings"><label class="setting-slider">鼠标灵敏度 <span id="senseValue">100%</span><input id="senseSlider" type="range" min="50" max="200" value="100"></label><label class="setting-slider">视野范围 <span id="fovValue">60°</span><input id="fovSlider" type="range" min="55" max="90" value="60"></label><label class="setting-slider">声音音量 <span id="volumeValue">100%</span><input id="volumeSlider" type="range" min="0" max="100" value="100"></label></div>
-      <div class="pause-help">WASD 移动 · Shift 疾跑／飞行下降 · F 飞行 · E 互动 · C 制作 · I 背包 · B 装修 · L 联机 · T 聊天 · 轨道 ` 快捷模式（1–0／Shift+1–8） · K 管理/模板 · Alt+Q旋转/Alt+R替换/Alt+Z撤销/Alt+Y重做 · R/Shift+R/Q/X/Y（坡道/弯坡轨Q上下、Shift+Q旋转；Shift+X调速；Ctrl+X换向；Y收回；H鸣笛） · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图（地下层按U切换深度） · 空格跳跃<br>按住左键挖掘／点击攻击 · 按住右键智能连续铺轨 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9／0 切换 · − 选择水方块</div>
+      <div class="pause-help">WASD 移动 · Shift 疾跑／飞行下降 · F 飞行 · E 互动 · C 制作 · I 背包 · B 装修 · L 联机 · T 聊天 · 轨道 ` 快捷模式（1–0／Shift+1–9） · K 管理/模板 · Alt+Q旋转/Alt+R替换/Alt+Z撤销/Alt+Y重做 · R/Shift+R/Q/X/Y（坡道/弯坡轨Q上下、Shift+Q旋转；Shift+X调速；Ctrl+X换向；Y收回；H鸣笛） · Z 撤销建造 · G 挥手 · V 肩位 · M 导航 · N 小地图 · J 故事 · Tab 地图（地下层按U切换深度） · 空格跳跃<br>按住左键挖掘／点击攻击 · 按住右键智能连续铺轨 · 中键取样 · F5 循环视角 · Shift＋滚轮缩放 · 数字键 1–9／0 切换 · − 选择水方块</div>
       <div class="pause-actions"><button class="resume" id="resumeBtn">继续冒险 →</button><button id="pauseSaveBtn">◆ 保存进度</button><button id="modeBtn">☠ 夜间生物：开</button><button id="flightBtn">✈ 飞行模式：关</button><button id="pauseUndoBtn">↶ 撤销建造</button><button class="danger" id="pauseResetBtn">↻ 新建世界</button></div>
       <div class="save-tools"><button id="exportSaveBtn">⇩ 导出存档备份</button><button id="importSaveBtn">⇧ 导入存档备份</button></div><div class="save-policy">自动保存：约每1分钟合并写入；导出优先使用压缩备份，导入失败会自动恢复原世界</div><input id="importSaveInput" type="file" accept="application/json,application/gzip,.json,.gz,.minicraft" hidden><div id="pauseSaveState"></div>
     </section>
@@ -143,10 +143,10 @@
         <div class="control"><span class="keys">E · C · 空格</span>互动 · 制作 · 跳跃</div>
       </div>
       <button id="start">开始探索 →</button>
-      <p class="tip">按住左键挖掘／点击攻击 · 按住右键智能连续铺轨 · 中键取样 · 数字键 1–9／0 切换物品 · − 选择水方块 · 默认第三人称 · F 飞行（最高128格） · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · L 联机 · T 聊天 · 轨道 ` 快捷模式（1–0／Shift+1–8） · K 管理/模板 · Alt+Q旋转/Alt+R替换/Alt+Z撤销/Alt+Y重做 · R/Shift+R/Q/X/Y（坡道/弯坡轨Q上下、Shift+Q旋转；Shift+X调速；Ctrl+X换向；Y收回；H鸣笛） · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
+      <p class="tip">按住左键挖掘／点击攻击 · 按住右键智能连续铺轨 · 中键取样 · 数字键 1–9／0 切换物品 · − 选择水方块 · 默认第三人称 · F 飞行（最高128格） · F5 循环视角 · V 切换肩位 · G 挥手 · M 切换导航 · N 小地图 · J 故事 · I 背包 · B 装修 · L 联机 · T 聊天 · 轨道 ` 快捷模式（1–0／Shift+1–9） · K 管理/模板 · Alt+Q旋转/Alt+R替换/Alt+Z撤销/Alt+Y重做 · R/Shift+R/Q/X/Y（坡道/弯坡轨Q上下、Shift+Q旋转；Shift+X调速；Ctrl+X换向；Y收回；H鸣笛） · Z 撤销建造 · Tab 地图 · Shift＋滚轮缩放 · 自动保存进度<br>若无法锁定鼠标，也可按住画面拖动视角</p>
     </section>
   </div>
 
-<script src="assets/minicraft.js?v=30"></script>
+<script src="assets/minicraft.js?v=31"></script>
 </body>
 </html>

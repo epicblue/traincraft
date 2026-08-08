@@ -77,7 +77,7 @@ const GEOMETRY = [
 const EXPECTED_SHAPES = [
   'straight', 'curve', 'cross', 'switch', 'stop', 'station', 'signal', 'ramp',
   'bridge', 'power', 'lantern', 'crossing', 'oneway', 'drawbridge', 'whistle',
-  'rampcurve', 'tunnel', 'turntable'
+  'rampcurve', 'tunnel', 'turntable', 'detector'
 ];
 
 test('轨道目录顺序、尺寸与存档索引保持兼容', () => {
@@ -92,13 +92,14 @@ test('轨道目录顺序、尺寸与存档索引保持兼容', () => {
   assert(size('rampcurve') === 4, 'curved ramp must occupy 2x2');
   assert(size('tunnel') === 2, 'tunnel must be 1x2');
   assert(size('turntable') === 1, 'turntable must be 1x1');
+  assert(size('detector') === 1, 'detector must be 1x1');
 });
 
 test('全部预定义模板在四个方向均无重叠、无断口', () => {
   const ctx = context({drawbridgeAngles: new Map()});
   loadTrackCatalog(ctx);
   runFunctions(ctx, GEOMETRY);
-  assert(ctx.TRACK_TEMPLATES.length === 8, 'unexpected template count');
+  assert(ctx.TRACK_TEMPLATES.length === 9, 'unexpected template count');
   for (const template of ctx.TRACK_TEMPLATES) {
     for (let rotation = 0; rotation < 4; rotation++) {
       const pieces = Array.from(ctx.transformTemplatePieces(template, rotation), (piece, i) => ({...piece, id: i + 1}));
@@ -120,6 +121,8 @@ test('全部预定义模板在四个方向均无重叠、无断口', () => {
   }
   const hub = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'turntable_hub');
   assert(hub && hub.pieces().length === 9, 'turntable hub template missing');
+  const sorter = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'detector_sorter');
+  assert(sorter && sorter.pieces().length === 8 && sorter.pieces().some(piece => piece.shape === 'detector' && piece.detectorMode === 2), 'detector sorter template missing');
 });
 
 test('旋转轨四向出口、中心转向路径、方向标签、规划与图标', () => {
@@ -145,7 +148,7 @@ test('旋转轨四向出口、中心转向路径、方向标签、规划与图�
   assert(ctx.turntableDirectionLabel(piece) === '北', 'rotated exit label invalid');
   assert(ctx.trackShortcutLabel(17) === '⇧8', 'turntable shortcut changed');
   assert(ctx.trackIconSvg('turntable').includes('<circle'), 'turntable icon missing');
-  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 18, 'track icons must be unique');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 19, 'track icons must be unique');
 });
 
 test('旋转轨交互与列车占用锁定', () => {
@@ -214,6 +217,55 @@ test('车站自动寻路会预先调整空闲旋转轨，且不会转动占用�
   turntable.turntableAxis = 0;
   ctx.busy = true;
   assert(ctx.planTrackRoute(north, east) === null, 'planner rotated an occupied turntable');
+});
+
+test('感应轨计数、报站、岔道触发、脉冲与目标范围', () => {
+  let now = 1000;
+  let rebuilds = 0;
+  let saves = 0;
+  let message = '';
+  const ctx = context({
+    trackPieces: [], detectorPulseUntil: new Map(), player: {x: 1.5, z: 3.5}, netConnected: false, netRole: '',
+    performance: {now: () => now},
+    trackLineForPiece: () => ({pieces: ctx.trackPieces}),
+    rebuildMesh: () => rebuilds++, saveGame: () => saves++,
+    toast: text => { message = text; }, tone: () => {}, setTimeout: () => {}
+  });
+  runFunctions(ctx, ['trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'detectorModeLabel', 'detectorTarget', 'triggerDetector']);
+  const detector = {id: 1, x: 1, y: 1, z: 3, rot: 0, shape: 'detector', detectorMode: 2, detectorCount: 0};
+  const branch = {id: 2, x: 0, y: 1, z: 4, rot: 0, shape: 'switch', branch: false};
+  ctx.trackPieces.push(detector, branch);
+  assert(ctx.detectorModeLabel(detector) === '岔道触发', 'detector mode label invalid');
+  assert(ctx.detectorTarget(detector) === branch, 'nearby switch target not found');
+  ctx.triggerDetector(detector);
+  assert(detector.detectorCount === 1 && branch.branch === true, 'detector did not toggle switch');
+  assert(ctx.detectorPulseUntil.get(detector.id) === 1720, 'detector pulse duration invalid');
+  assert(rebuilds === 1 && saves === 1 && message.includes('弯道'), 'detector feedback invalid');
+
+  detector.detectorMode = 1;
+  now = 2000;
+  ctx.triggerDetector(detector);
+  assert(detector.detectorCount === 2 && branch.branch === true, 'report mode changed switch');
+  assert(ctx.detectorModeLabel(detector) === '报站提示' && message.includes('第 2 次'), 'report mode feedback invalid');
+
+  detector.detectorMode = 0;
+  ctx.triggerDetector(detector);
+  assert(detector.detectorCount === 3 && ctx.detectorModeLabel(detector) === '仅计数', 'count mode invalid');
+  ctx.netConnected = true;
+  ctx.netRole = 'guest';
+  now = 3000;
+  const guestCount = detector.detectorCount;
+  ctx.triggerDetector(detector);
+  assert(detector.detectorCount === guestCount && branch.branch === true, 'guest duplicated authoritative detector action');
+  assert(ctx.detectorPulseUntil.get(detector.id) === 3420, 'guest detector pulse missing');
+  ctx.netConnected = false;
+  ctx.netRole = '';
+  branch.x = 40;
+  branch.z = 40;
+  detector.detectorMode = 2;
+  assert(ctx.detectorTarget(detector) === null, 'out-of-range switch was selected');
+  assert(SOURCE.includes("piece.shape==='detector'&&!trackTrain.whistleServed"), 'primary train detector hook missing');
+  assert(SOURCE.includes("piece.shape==='detector'&&!train.whistleServed"), 'extra train detector hook missing');
 });
 
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
@@ -362,7 +414,7 @@ test('轨道可站立表面：直轨、曲线、坡道、升降桥与空间索�
   near(ctx.trackSurfaceHeight(turntable, turnCenter.x, turnCenter.z), 3.255, 0.001);
 });
 
-test('轨道快捷模式覆盖18种图标与数字映射，并返回原积木', () => {
+test('轨道快捷模式覆盖19种图标与数字映射，并返回原积木', () => {
   const palette = {hidden: false, innerHTML: '', classList: {toggle(name, value) { if (name === 'hidden') palette.hidden = value; }}};
   const ctx = context({
     trackKeyboardMode: false, selected: 2, lastNonTrackSelected: 2, trackTemplatePreview: null,
@@ -387,15 +439,15 @@ test('轨道快捷模式覆盖18种图标与数字映射，并返回原积木', 
     assert(ctx.trackShapeMode === digit - 1, `Digit${digit} mapping invalid`);
   }
   assert(ctx.chooseTrackShortcut('Digit0', false) && ctx.trackShapeMode === 9, 'Digit0 mapping invalid');
-  for (let digit = 1; digit <= 8; digit++) {
+  for (let digit = 1; digit <= 9; digit++) {
     assert(ctx.chooseTrackShortcut(`Digit${digit}`, true), `Shift+${digit} rejected`);
     assert(ctx.trackShapeMode === 9 + digit, `Shift+${digit} mapping invalid`);
   }
   ctx.updateTrackKeyboardPalette();
   assert(!palette.hidden, 'palette hidden in keyboard mode');
-  assert((palette.innerHTML.match(/data-track-key-index=/g) || []).length === 18, 'palette item count invalid');
-  assert(palette.innerHTML.includes('旋转轨') && palette.innerHTML.includes('⇧8'), 'new rail absent from palette');
-  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 18, 'icons are not unique');
+  assert((palette.innerHTML.match(/data-track-key-index=/g) || []).length === 19, 'palette item count invalid');
+  assert(palette.innerHTML.includes('旋转轨') && palette.innerHTML.includes('感应轨') && palette.innerHTML.includes('⇧9'), 'new rail absent from palette');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 19, 'icons are not unique');
   ctx.toggleTrackKeyboardMode();
   assert(!ctx.trackKeyboardMode && ctx.selected === 2, 'keyboard mode did not restore previous block');
 });
