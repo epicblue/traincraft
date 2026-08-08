@@ -68,7 +68,7 @@ function test(name, fn) {
 }
 
 const GEOMETRY = [
-  'trackDirection', 'turntableDirectionLabel', 'rotateTrackOffset', 'trackCells',
+  'trackDirection', 'turntableSelectedExit', 'turntableDirectionLabel', 'rotateTrackOffset', 'trackCells',
   'trackCenter', 'trackLocalToWorld', 'trackPorts', 'trackPortKey',
   'trackRouteExit', 'trackAllowsEntry', 'trackPathRaw', 'trackRoutePairs',
   'trackPlanningExits', 'templatePieceDefaults', 'transformTemplatePieces'
@@ -122,22 +122,27 @@ test('全部预定义模板在四个方向均无重叠、无断口', () => {
   assert(hub && hub.pieces().length === 9, 'turntable hub template missing');
 });
 
-test('旋转轨双轴通行、方向标签、规划与图标', () => {
-  const ctx = context({drawbridgeAngles: new Map()});
+test('旋转轨四向出口、中心转向路径、方向标签、规划与图标', () => {
+  const ctx = context({drawbridgeAngles: new Map(), trackPieceBusy: () => false});
   loadTrackCatalog(ctx);
   runFunctions(ctx, [...GEOMETRY, 'trackShortcutLabel', 'trackIconSvg']);
-  const piece = {id: 1, x: 0, y: 1, z: 0, rot: 0, shape: 'turntable', turntableAxis: 0};
+  const piece = {id: 1, x: 0, y: 1, z: 0, rot: 0, shape: 'turntable', turntableAxis: 0, turntableExit: 2};
   assert(ctx.trackPorts(piece).length === 4, 'turntable needs four ports');
-  assert(ctx.trackAllowsEntry(piece, 0) && !ctx.trackAllowsEntry(piece, 1) && ctx.trackAllowsEntry(piece, 2), 'north/south axis invalid');
-  assert(ctx.trackRouteExit(piece, 0) === 2, 'turntable opposite exit invalid');
-  assert(JSON.stringify(ctx.trackRoutePairs(piece)) === '[[0,2]]', 'north/south pair invalid');
-  assert(ctx.turntableDirectionLabel(piece) === '南北', 'direction label invalid');
-  piece.turntableAxis = 1;
-  assert(!ctx.trackAllowsEntry(piece, 0) && ctx.trackAllowsEntry(piece, 1) && ctx.trackAllowsEntry(piece, 3), 'east/west axis invalid');
-  assert(JSON.stringify(ctx.trackRoutePairs(piece)) === '[[1,3]]', 'east/west pair invalid');
-  assert(ctx.trackPlanningExits(piece, 0).length === 0, 'inactive entry should not route');
+  for (let entry = 0; entry < 4; entry++) assert(ctx.trackAllowsEntry(piece, entry), `entry ${entry} should be accepted`);
+  assert(ctx.trackRouteExit(piece, 0) === 2, 'north entry should use selected south exit');
+  assert(ctx.trackRouteExit(piece, 1) === 2, 'east entry should curve to selected south exit');
+  assert(ctx.trackRouteExit(piece, 2) === 0, 'selected-side entry should continue opposite');
+  assert(ctx.trackRoutePairs(piece).length === 3, 'turntable route display should expose three unique paths');
+  assert(ctx.turntableDirectionLabel(piece) === '南', 'selected exit label invalid');
+  const curvedMid = ctx.trackPathRaw(piece, 1, 2, 0.5);
+  const center = ctx.trackCenter(piece);
+  near(curvedMid.x, center.x, 0.001, 'turntable route misses center');
+  near(curvedMid.z, center.z, 0.001, 'turntable route misses center');
+  assert(ctx.trackPlanningExits(piece, 0).length === 3, 'free turntable should expose three planned exits');
+  piece.turntableExit = 1;
+  assert(ctx.turntableDirectionLabel(piece) === '东', 'east exit label invalid');
   piece.rot = 1;
-  assert(ctx.turntableDirectionLabel(piece) === '南北', 'rotated direction label invalid');
+  assert(ctx.turntableDirectionLabel(piece) === '北', 'rotated exit label invalid');
   assert(ctx.trackShortcutLabel(17) === '⇧8', 'turntable shortcut changed');
   assert(ctx.trackIconSvg('turntable').includes('<circle'), 'turntable icon missing');
   assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 18, 'track icons must be unique');
@@ -156,17 +161,59 @@ test('旋转轨交互与列车占用锁定', () => {
     toast: text => { message = text; },
     tone: () => {},
     saveGame: () => saves++,
-    turntableDirectionLabel: piece => piece.turntableAxis === 1 ? '东西' : '南北'
+    turntableSelectedExit: piece => Number.isInteger(piece.turntableExit) ? piece.turntableExit : (piece.turntableAxis === 1 ? 1 : 2),
+    turntableDirectionLabel: piece => ['北', '东', '南', '西'][piece.turntableExit]
   });
   runFunctions(ctx, ['interactTrack']);
-  const piece = {id: 9, shape: 'turntable', turntableAxis: 0};
+  const piece = {id: 9, shape: 'turntable', turntableAxis: 0, turntableExit: 2};
   ctx.interactTrack(piece);
-  assert(piece.turntableAxis === 1 && rebuilds === 1 && saves === 1, 'turntable did not rotate');
-  assert(ctx.trackNetworkCache === null && message.includes('东西'), 'turntable cache/message invalid');
+  assert(piece.turntableExit === 3 && piece.turntableAxis === 1 && rebuilds === 1 && saves === 1, 'turntable did not rotate');
+  assert(ctx.trackNetworkCache === null && message.includes('西'), 'turntable cache/message invalid');
   busy = true;
   ctx.interactTrack(piece);
-  assert(piece.turntableAxis === 1 && rebuilds === 1 && saves === 1, 'busy turntable rotated');
+  assert(piece.turntableExit === 3 && rebuilds === 1 && saves === 1, 'busy turntable rotated');
   assert(message.includes('不能转向'), 'busy warning missing');
+});
+
+test('车站自动寻路会预先调整空闲旋转轨，且不会转动占用中的转盘', () => {
+  let message = '';
+  const ctx = context({
+    trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
+    trackNetworkCache: null, drawbridgeAngles: new Map(), busy: false,
+    trackTrain: {placed: true, running: false, pieceId: 1, entry: 0, exit: 1, t: 0.18, speed: 0, cruiseSpeed: 1.35, yaw: 0, pitch: 0, distance: 0, routePlan: [], autoService: false},
+    ridingTrain: false,
+    key: (x, y, z) => `${x},${y},${z}`,
+    trackPieceBusy: () => ctx.busy,
+    canNetworkEdit: () => true,
+    trackLineForPiece: () => ({key: 1, pieces: ctx.trackPieces, stationPieces: [ctx.trackPieces[0], ctx.trackPieces[2]]}),
+    trackStationDisplayName: piece => piece.stationName || '车站',
+    placeTrackTrain: () => {}, syncTrackRider: () => {}, resetTrainTrail: () => {},
+    rebuildMesh: () => {}, saveGame: () => {}, closeTrackPanel: () => {},
+    toast: text => { message = text; }, tone: () => {}, setTimeout: () => {}
+  });
+  runFunctions(ctx, [
+    'trackDirection', 'turntableSelectedExit', 'turntableDirectionLabel', 'rotateTrackOffset',
+    'trackCells', 'trackCenter', 'trackLocalToWorld', 'trackPorts', 'trackPortKey',
+    'rebuildTrackGraph', 'connectedTrackPort', 'trackRouteExit', 'trackAllowsEntry',
+    'trackPathRaw', 'trackPathLength', 'setTrackTrainPose', 'trackPlanningExits',
+    'planTrackRoute', 'setTrainDestination'
+  ]);
+  const north = {id: 1, x: 0, y: 1, z: -2, rot: 0, shape: 'station', stationName: '北站'};
+  const turntable = {id: 2, x: 0, y: 1, z: 0, rot: 0, shape: 'turntable', turntableExit: 2, turntableAxis: 0};
+  const east = {id: 3, x: 1, y: 1, z: 0, rot: 1, shape: 'station', stationName: '东站'};
+  ctx.trackPieces.push(north, turntable, east);
+  ctx.rebuildTrackGraph();
+  const plan = ctx.planTrackRoute(north, east);
+  const tableStep = plan && Array.from(plan.path).find(step => step.piece.id === turntable.id);
+  assert(tableStep && tableStep.entry === 0 && tableStep.exit === 1, 'planner did not choose east turntable exit');
+  assert(ctx.setTrainDestination(east.id) === true, 'destination dispatch failed');
+  assert(turntable.turntableExit === 1 && turntable.turntableAxis === 1, 'turntable was not pre-aligned');
+  assert(message.includes('自动转向1个旋转轨'), 'automatic turntable adjustment was not reported');
+
+  turntable.turntableExit = 2;
+  turntable.turntableAxis = 0;
+  ctx.busy = true;
+  assert(ctx.planTrackRoute(north, east) === null, 'planner rotated an occupied turntable');
 });
 
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
@@ -276,7 +323,7 @@ test('轨道可站立表面：直轨、曲线、坡道、升降桥与空间索�
     collides: () => false
   });
   runFunctions(ctx, [
-    'trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld',
+    'trackDirection', 'turntableSelectedExit', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld',
     'trackPorts', 'trackPortKey', 'rebuildTrackGraph', 'findTrackPiece', 'trackRouteExit',
     'trackPathRaw', 'trackRoutePairs', 'nearbyTrackPieces', 'trackSurfaceHeight', 'trackLandingHeight'
   ]);

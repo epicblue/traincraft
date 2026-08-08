@@ -76,9 +76,9 @@ def test_backup_gzip_roundtrip() -> None:
         "worldVersion": 13,
         "worldWidth": 128,
         "undergroundDepth": 10,
-        "trackFeatureVersion": 29,
+        "trackFeatureVersion": 30,
         "world": [["1,0,1", 1], ["4,1,4", 37], ["4,-11,4", 36]],
-        "trackPieces": [{"id": 1, "x": 4, "y": 1, "z": 4, "shape": "turntable", "turntableAxis": 1}],
+        "trackPieces": [{"id": 1, "x": 4, "y": 1, "z": 4, "shape": "turntable", "turntableAxis": 1, "turntableExit": 1}],
     }
     raw = json.dumps(backup, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     packed = gzip.compress(raw)
@@ -184,10 +184,10 @@ async def test_http_assets_async() -> None:
         app = SERVER.make_app(ROOT, Path(tmp))
         async with TestClient(TestServer(app)) as client:
             cases = [
-                ("/", "text/html", "assets/minicraft.js?v=29"),
+                ("/", "text/html", "assets/minicraft.js?v=30"),
                 ("/index.html", "text/html", "MINICRAFT"),
-                ("/assets/minicraft.css?v=29", "text/css", "#trackKeyboardPalette"),
-                ("/assets/minicraft.js?v=29", "javascript", "trackFeatureVersion:29"),
+                ("/assets/minicraft.css?v=30", "text/css", "#trackKeyboardPalette"),
+                ("/assets/minicraft.js?v=30", "javascript", "trackFeatureVersion:30"),
                 ("/api/rooms", "application/json", "rooms"),
             ]
             for url, content_type, needle in cases:
