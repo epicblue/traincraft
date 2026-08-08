@@ -219,38 +219,62 @@ test('车站自动寻路会预先调整空闲旋转轨，且不会转动占用�
   assert(ctx.planTrackRoute(north, east) === null, 'planner rotated an occupied turntable');
 });
 
-test('感应轨计数、报站、岔道触发、脉冲与目标范围', () => {
+test('感应轨计数、报站、目标绑定、岔道/转盘触发、脉冲与联机权限', () => {
   let now = 1000;
   let rebuilds = 0;
   let saves = 0;
   let message = '';
   const ctx = context({
-    trackPieces: [], detectorPulseUntil: new Map(), player: {x: 1.5, z: 3.5}, netConnected: false, netRole: '',
+    trackPieces: [], detectorPulseUntil: new Map(), player: {x: 1.5, z: 3.5}, netConnected: false, netRole: '', busy: false,
     performance: {now: () => now},
     trackLineForPiece: () => ({pieces: ctx.trackPieces}),
+    trackPieceBusy: () => ctx.busy,
     rebuildMesh: () => rebuilds++, saveGame: () => saves++,
     toast: text => { message = text; }, tone: () => {}, setTimeout: () => {}
   });
-  runFunctions(ctx, ['trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'detectorModeLabel', 'detectorTarget', 'triggerDetector']);
-  const detector = {id: 1, x: 1, y: 1, z: 3, rot: 0, shape: 'detector', detectorMode: 2, detectorCount: 0};
+  runFunctions(ctx, [
+    'trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld', 'trackPorts',
+    'turntableSelectedExit', 'turntableDirectionLabel', 'detectorModeLabel', 'detectorTargetCandidates',
+    'detectorTarget', 'detectorTargetText', 'cycleDetectorTarget', 'triggerDetector'
+  ]);
+  const detector = {id: 1, x: 1, y: 1, z: 3, rot: 0, shape: 'detector', detectorMode: 2, detectorCount: 0, detectorTargetId: null};
   const branch = {id: 2, x: 0, y: 1, z: 4, rot: 0, shape: 'switch', branch: false};
-  ctx.trackPieces.push(detector, branch);
+  const fartherBranch = {id: 3, x: 4, y: 1, z: 7, rot: 0, shape: 'switch', branch: false};
+  const turntable = {id: 4, x: 2, y: 1, z: 4, rot: 0, shape: 'turntable', turntableExit: 2, turntableAxis: 0};
+  ctx.trackPieces.push(detector, branch, fartherBranch, turntable);
   assert(ctx.detectorModeLabel(detector) === '岔道触发', 'detector mode label invalid');
-  assert(ctx.detectorTarget(detector) === branch, 'nearby switch target not found');
+  assert(ctx.detectorTarget(detector) === branch, 'nearest switch target not found');
+  ctx.cycleDetectorTarget(detector);
+  assert(detector.detectorTargetId === branch.id && ctx.detectorTargetText(detector).includes(`#${branch.id}`), 'explicit detector binding failed');
+  ctx.cycleDetectorTarget(detector);
+  assert(detector.detectorTargetId === fartherBranch.id, 'detector target cycling failed');
+  detector.detectorTargetId = branch.id;
   ctx.triggerDetector(detector);
-  assert(detector.detectorCount === 1 && branch.branch === true, 'detector did not toggle switch');
+  assert(detector.detectorCount === 1 && branch.branch === true, 'detector did not toggle bound switch');
   assert(ctx.detectorPulseUntil.get(detector.id) === 1720, 'detector pulse duration invalid');
-  assert(rebuilds === 1 && saves === 1 && message.includes('弯道'), 'detector feedback invalid');
+  assert(rebuilds >= 3 && saves >= 3 && message.includes('弯道'), 'detector feedback invalid');
+
+  detector.detectorMode = 3;
+  detector.detectorTargetId = turntable.id;
+  now = 1800;
+  assert(ctx.detectorModeLabel(detector) === '转盘触发' && ctx.detectorTarget(detector) === turntable, 'turntable detector target invalid');
+  ctx.triggerDetector(detector);
+  assert(turntable.turntableExit === 3 && turntable.turntableAxis === 1, 'detector did not rotate turntable');
+  assert(message.includes('出口已转向西'), 'turntable detector feedback invalid');
+  ctx.busy = true;
+  ctx.triggerDetector(detector);
+  assert(turntable.turntableExit === 3 && message.includes('正在被占用'), 'busy turntable was rotated');
+  ctx.busy = false;
 
   detector.detectorMode = 1;
   now = 2000;
   ctx.triggerDetector(detector);
-  assert(detector.detectorCount === 2 && branch.branch === true, 'report mode changed switch');
-  assert(ctx.detectorModeLabel(detector) === '报站提示' && message.includes('第 2 次'), 'report mode feedback invalid');
+  assert(detector.detectorCount === 4 && branch.branch === true, 'report mode changed switch');
+  assert(ctx.detectorModeLabel(detector) === '报站提示' && message.includes('第 4 次'), 'report mode feedback invalid');
 
   detector.detectorMode = 0;
   ctx.triggerDetector(detector);
-  assert(detector.detectorCount === 3 && ctx.detectorModeLabel(detector) === '仅计数', 'count mode invalid');
+  assert(detector.detectorCount === 5 && ctx.detectorModeLabel(detector) === '仅计数', 'count mode invalid');
   ctx.netConnected = true;
   ctx.netRole = 'guest';
   now = 3000;
@@ -260,12 +284,17 @@ test('感应轨计数、报站、岔道触发、脉冲与目标范围', () => {
   assert(ctx.detectorPulseUntil.get(detector.id) === 3420, 'guest detector pulse missing');
   ctx.netConnected = false;
   ctx.netRole = '';
+
   branch.x = 40;
   branch.z = 40;
+  fartherBranch.x = 45;
+  fartherBranch.z = 45;
+  detector.detectorTargetId = null;
   detector.detectorMode = 2;
   assert(ctx.detectorTarget(detector) === null, 'out-of-range switch was selected');
   assert(SOURCE.includes("piece.shape==='detector'&&!trackTrain.whistleServed"), 'primary train detector hook missing');
   assert(SOURCE.includes("piece.shape==='detector'&&!train.whistleServed"), 'extra train detector hook missing');
+  assert(SOURCE.includes("if(lookedTrack?.shape==='detector'&&shifted)"), 'Shift+E detector binding hook missing');
 });
 
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
