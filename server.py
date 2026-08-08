@@ -470,6 +470,7 @@ class Room:
             clean["selected"] = int(payload.get("selected", 1) or 1)
             clean["flying"] = bool(payload.get("flying", False))
             clean["mining"] = bool(payload.get("mining", False))
+            clean["ridingTrain"] = bool(payload.get("ridingTrain", False))
             await self.broadcast(clean, exclude=client)
             return
 

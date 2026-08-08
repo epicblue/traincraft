@@ -305,7 +305,7 @@ test('木质车库自动停车、直接通过开关与主/附加列车挂钩', (
   const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.4, speed: 1, cruiseSpeed: 1, running: true, wait: 0, distance: 0, stationServed: false, powerServed: false, whistleServed: false};
   const ctx = context({
     trackPieces: [depot],
-    trainObstacleDistance: () => null,
+    trainObstacleDistance: () => null, trainPedestrianDistance: () => null,
     extraTrainSpeedLimit: () => 1,
     trackPathLength: () => 1,
     setExtraTrainPose: () => {},
@@ -355,7 +355,7 @@ test('车站支持1/2/4/8秒停靠时刻与主/附加列车调度', () => {
   const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.4, speed: 1, cruiseSpeed: 1, running: true, wait: 0, distance: 0, stationServed: false, powerServed: false, whistleServed: false};
   const motion = context({
     trackPieces: [station],
-    trainObstacleDistance: () => null, extraTrainSpeedLimit: () => 1,
+    trainObstacleDistance: () => null, trainPedestrianDistance: () => null, extraTrainSpeedLimit: () => 1,
     trackPathLength: () => 1, setExtraTrainPose: () => {}, signalIsGreen: () => true,
     stationDwellSeconds: piece => piece.stationDwell || 2,
     triggerDetector: () => {}, connectedTrackPort: () => null,
@@ -479,7 +479,7 @@ test('自动闭塞信号检测方向、列车占用与净空', () => {
     trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
     trackNetworkCache: null, trackTrain: {placed: false, pieceId: null, wagonCount: 0},
     extraTrains: [], drawbridgeAngles: new Map(), world,
-    primaryWagonPoses: () => [],
+    primaryWagonPoses: () => [], trackPieceHasPedestrian: () => false,
     get: (x, y, z) => world.get(`${x},${y},${z}`) || 0,
     key: (x, y, z) => `${x},${y},${z}`,
     isSolidType: type => Boolean(type && type !== 37)
@@ -559,6 +559,51 @@ test('轨道可站立表面：直轨、曲线、坡道、升降桥与空间索�
   for (const cell of ctx.trackCells(ramp)) assert(ctx.findTrackPiece(cell.x, cell.y, cell.z) === ramp, 'track cell index failed');
   const turnCenter = ctx.trackCenter(turntable);
   near(ctx.trackSurfaceHeight(turntable, turnCenter.x, turnCenter.z), 3.255, 0.001);
+});
+
+test('轨道行人安全检测会让主/附加列车与自动信号停车', () => {
+  const ctx = context({
+    trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
+    trackNetworkCache: null, trackTrain: {placed: false}, extraTrains: [], drawbridgeAngles: new Map(),
+    ridingTrain: false, flying: false, player: {x: 0.5, y: 1.255, z: 1.5}, remotes: [],
+    activeRemotePlayers: () => ctx.remotes,
+    primaryWagonPoses: () => [],
+    key: (x, y, z) => `${x},${y},${z}`
+  });
+  runFunctions(ctx, [
+    'trackDirection', 'turntableSelectedExit', 'rotateTrackOffset', 'trackCells', 'trackCenter',
+    'trackLocalToWorld', 'trackPorts', 'trackPortKey', 'rebuildTrackGraph', 'connectedTrackPort',
+    'trackRouteExit', 'trackAllowsEntry', 'trackPathRaw', 'trackPathLength', 'trackPointOnPiece',
+    'trackPedestrians', 'trackPieceHasPedestrian', 'trackPathPedestrianDistance', 'trainPedestrianDistance'
+  ]);
+  const straight = {id: 1, x: 0, y: 1, z: 0, rot: 0, shape: 'straight'};
+  ctx.trackPieces.push(straight);
+  ctx.rebuildTrackGraph();
+  const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.2};
+  const ahead = ctx.trainPedestrianDistance(train, straight);
+  assert(ahead !== null && ahead > 0.8 && ahead < 1.3, `ahead pedestrian distance invalid: ${ahead}`);
+  assert(ctx.trackPieceHasPedestrian(straight), 'pedestrian was not recognized on rail');
+
+  ctx.player.z = -0.4;
+  assert(ctx.trainPedestrianDistance(train, straight) === null, 'pedestrian behind train caused braking');
+  ctx.player.z = 1.5;
+  ctx.player.y = 4;
+  assert(ctx.trainPedestrianDistance(train, straight) === null, 'high pedestrian caused braking');
+  ctx.player.y = 1.255;
+  ctx.ridingTrain = true;
+  assert(ctx.trainPedestrianDistance(train, straight) === null, 'local rider was treated as pedestrian');
+  ctx.ridingTrain = false;
+  ctx.flying = true;
+  ctx.remotes = [{x: 0.5, y: 1.255, z: 1.4, flying: false, ridingTrain: false}];
+  assert(ctx.trainPedestrianDistance(train, straight) !== null, 'remote pedestrian was ignored');
+  ctx.remotes[0].ridingTrain = true;
+  assert(ctx.trainPedestrianDistance(train, straight) === null, 'remote rider was treated as pedestrian');
+
+  assert(SOURCE.includes('const pedestrian=trainPedestrianDistance(trackTrain,piece)'), 'primary train pedestrian braking missing');
+  assert(SOURCE.includes('const pedestrian=trainPedestrianDistance(train,piece)'), 'extra train pedestrian braking missing');
+  assert(SOURCE.includes("reason:'轨道上有人'"), 'automatic signal pedestrian reason missing');
+  assert(SOURCE.includes('drawTrainSafetyWarnings()'), 'pedestrian warning light missing');
+  assert(SOURCE.includes('r.ridingTrain=!!msg.ridingTrain'), 'remote rider state missing');
 });
 
 test('轨道快捷模式覆盖20种图标与数字映射，并返回原积木', () => {

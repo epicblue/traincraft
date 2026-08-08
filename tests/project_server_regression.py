@@ -76,7 +76,7 @@ def test_backup_gzip_roundtrip() -> None:
         "worldVersion": 13,
         "worldWidth": 128,
         "undergroundDepth": 10,
-        "trackFeatureVersion": 35,
+        "trackFeatureVersion": 36,
         "world": [["1,0,1", 1], ["4,1,4", 37], ["4,-11,4", 36]],
         "trackPieces": [
             {"id": 1, "x": 4, "y": 1, "z": 4, "shape": "turntable", "turntableAxis": 1, "turntableExit": 1},
@@ -174,6 +174,11 @@ async def test_server_message_validation_async() -> None:
         await room.process(guest, {"kind": "catRide", "ridingTrain": True})
         assert room.shared["cat"]["ridingTrain"] is True
 
+        guest.ws.messages.clear()
+        await room.process(host, {"kind": "player", "x": 1, "y": 2, "z": 3, "yaw": 0, "pitch": 0, "ridingTrain": True})
+        relayed = [json.loads(message) for message in guest.ws.messages if json.loads(message).get("kind") == "player"]
+        assert relayed and relayed[-1]["ridingTrain"] is True
+
         # Batch processing is capped at 512 valid block edits.
         rows = [{"x": i % 128, "y": 1, "z": (i // 128) % 128, "t": 2} for i in range(700)]
         await room.process(host, {"kind": "blocks", "items": rows})
@@ -190,10 +195,10 @@ async def test_http_assets_async() -> None:
         app = SERVER.make_app(ROOT, Path(tmp))
         async with TestClient(TestServer(app)) as client:
             cases = [
-                ("/", "text/html", "assets/minicraft.js?v=35"),
+                ("/", "text/html", "assets/minicraft.js?v=36"),
                 ("/index.html", "text/html", "MINICRAFT"),
-                ("/assets/minicraft.css?v=35", "text/css", "#trackKeyboardPalette"),
-                ("/assets/minicraft.js?v=35", "javascript", "trackFeatureVersion:35"),
+                ("/assets/minicraft.css?v=36", "text/css", "#trackKeyboardPalette"),
+                ("/assets/minicraft.js?v=36", "javascript", "trackFeatureVersion:36"),
                 ("/api/rooms", "application/json", "rooms"),
             ]
             for url, content_type, needle in cases:
