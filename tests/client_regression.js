@@ -77,7 +77,7 @@ const GEOMETRY = [
 const EXPECTED_SHAPES = [
   'straight', 'curve', 'cross', 'switch', 'stop', 'station', 'signal', 'ramp',
   'bridge', 'power', 'lantern', 'crossing', 'oneway', 'drawbridge', 'whistle',
-  'rampcurve', 'tunnel', 'turntable', 'detector'
+  'rampcurve', 'tunnel', 'turntable', 'detector', 'depot'
 ];
 
 test('轨道目录顺序、尺寸与存档索引保持兼容', () => {
@@ -93,13 +93,14 @@ test('轨道目录顺序、尺寸与存档索引保持兼容', () => {
   assert(size('tunnel') === 2, 'tunnel must be 1x2');
   assert(size('turntable') === 1, 'turntable must be 1x1');
   assert(size('detector') === 1, 'detector must be 1x1');
+  assert(size('depot') === 2, 'depot must be 1x2');
 });
 
 test('全部预定义模板在四个方向均无重叠、无断口', () => {
   const ctx = context({drawbridgeAngles: new Map()});
   loadTrackCatalog(ctx);
   runFunctions(ctx, GEOMETRY);
-  assert(ctx.TRACK_TEMPLATES.length === 9, 'unexpected template count');
+  assert(ctx.TRACK_TEMPLATES.length === 10, 'unexpected template count');
   for (const template of ctx.TRACK_TEMPLATES) {
     for (let rotation = 0; rotation < 4; rotation++) {
       const pieces = Array.from(ctx.transformTemplatePieces(template, rotation), (piece, i) => ({...piece, id: i + 1}));
@@ -123,6 +124,8 @@ test('全部预定义模板在四个方向均无重叠、无断口', () => {
   assert(hub && hub.pieces().length === 9, 'turntable hub template missing');
   const sorter = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'detector_sorter');
   assert(sorter && sorter.pieces().length === 8 && sorter.pieces().some(piece => piece.shape === 'detector' && piece.detectorMode === 2), 'detector sorter template missing');
+  const depot = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'double_depot');
+  assert(depot && depot.pieces().length === 7 && depot.pieces().filter(piece => piece.shape === 'depot').length === 2, 'double depot template missing');
 });
 
 test('旋转轨四向出口、中心转向路径、方向标签、规划与图标', () => {
@@ -148,7 +151,7 @@ test('旋转轨四向出口、中心转向路径、方向标签、规划与图�
   assert(ctx.turntableDirectionLabel(piece) === '北', 'rotated exit label invalid');
   assert(ctx.trackShortcutLabel(17) === '⇧8', 'turntable shortcut changed');
   assert(ctx.trackIconSvg('turntable').includes('<circle'), 'turntable icon missing');
-  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 19, 'track icons must be unique');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 20, 'track icons must be unique');
 });
 
 test('旋转轨交互与列车占用锁定', () => {
@@ -297,6 +300,42 @@ test('感应轨计数、报站、目标绑定、岔道/转盘触发、脉冲与�
   assert(SOURCE.includes("if(lookedTrack?.shape==='detector'&&shifted)"), 'Shift+E detector binding hook missing');
 });
 
+test('木质车库自动停车、直接通过开关与主/附加列车挂钩', () => {
+  const depot = {id: 1, x: 0, y: 1, z: 0, rot: 0, shape: 'depot', depotStop: true};
+  const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.4, speed: 1, cruiseSpeed: 1, running: true, wait: 0, distance: 0, stationServed: false, powerServed: false, whistleServed: false};
+  const ctx = context({
+    trackPieces: [depot],
+    trainObstacleDistance: () => null,
+    extraTrainSpeedLimit: () => 1,
+    trackPathLength: () => 1,
+    setExtraTrainPose: () => {},
+    signalIsGreen: () => true,
+    triggerDetector: () => {},
+    connectedTrackPort: () => null,
+    trackAllowsEntry: () => true,
+    trackClearanceBlocked: () => false,
+    player: {x: 100, z: 100}, tone: () => {}, setTimeout: () => {}
+  });
+  runFunctions(ctx, ['updateExtraTrain']);
+  ctx.updateExtraTrain(train, 0.2);
+  assert(train.t === 0.5 && train.running === false && train.speed === 0 && train.stationServed === true, 'extra train did not park in depot');
+
+  let rebuilds = 0;
+  let saves = 0;
+  let message = '';
+  const controls = context({
+    canNetworkEdit: () => true,
+    rebuildMesh: () => rebuilds++, saveGame: () => saves++,
+    toast: text => { message = text; }, tone: () => {}
+  });
+  runFunctions(controls, ['interactTrack']);
+  controls.interactTrack(depot);
+  assert(depot.depotStop === false && rebuilds === 1 && saves === 1 && message.includes('直接通过'), 'depot pass-through toggle failed');
+  assert(SOURCE.includes("piece.shape==='depot'&&piece.depotStop!==false&&!trackTrain.stationServed"), 'primary train depot hook missing');
+  assert(SOURCE.includes("piece.shape==='depot'&&piece.depotStop!==false&&!train.stationServed"), 'extra train depot hook missing');
+  assert(SOURCE.includes("piece.shape==='depot'?'车库保护'"), 'depot signal protection missing');
+});
+
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
   const world = new Map();
   const ctx = context({
@@ -443,7 +482,7 @@ test('轨道可站立表面：直轨、曲线、坡道、升降桥与空间索�
   near(ctx.trackSurfaceHeight(turntable, turnCenter.x, turnCenter.z), 3.255, 0.001);
 });
 
-test('轨道快捷模式覆盖19种图标与数字映射，并返回原积木', () => {
+test('轨道快捷模式覆盖20种图标与数字映射，并返回原积木', () => {
   const palette = {hidden: false, innerHTML: '', classList: {toggle(name, value) { if (name === 'hidden') palette.hidden = value; }}};
   const ctx = context({
     trackKeyboardMode: false, selected: 2, lastNonTrackSelected: 2, trackTemplatePreview: null,
@@ -472,11 +511,12 @@ test('轨道快捷模式覆盖19种图标与数字映射，并返回原积木', 
     assert(ctx.chooseTrackShortcut(`Digit${digit}`, true), `Shift+${digit} rejected`);
     assert(ctx.trackShapeMode === 9 + digit, `Shift+${digit} mapping invalid`);
   }
+  assert(ctx.chooseTrackShortcut('Digit0', true) && ctx.trackShapeMode === 19 && ctx.trackShortcutLabel(19) === '⇧0', 'Shift+0 depot mapping invalid');
   ctx.updateTrackKeyboardPalette();
   assert(!palette.hidden, 'palette hidden in keyboard mode');
-  assert((palette.innerHTML.match(/data-track-key-index=/g) || []).length === 19, 'palette item count invalid');
-  assert(palette.innerHTML.includes('旋转轨') && palette.innerHTML.includes('感应轨') && palette.innerHTML.includes('⇧9'), 'new rail absent from palette');
-  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 19, 'icons are not unique');
+  assert((palette.innerHTML.match(/data-track-key-index=/g) || []).length === 20, 'palette item count invalid');
+  assert(palette.innerHTML.includes('旋转轨') && palette.innerHTML.includes('感应轨') && palette.innerHTML.includes('木质车库') && palette.innerHTML.includes('⇧0'), 'new rail absent from palette');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 20, 'icons are not unique');
   ctx.toggleTrackKeyboardMode();
   assert(!ctx.trackKeyboardMode && ctx.selected === 2, 'keyboard mode did not restore previous block');
 });
