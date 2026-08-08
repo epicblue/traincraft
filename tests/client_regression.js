@@ -1,0 +1,397 @@
+#!/usr/bin/env node
+'use strict';
+
+/**
+ * MINICRAFT 客户端回归测试。
+ *
+ * 不启动浏览器；从 assets/minicraft.js 提取纯函数，在隔离 VM 中验证轨道、
+ * 模板、信号、站立物理、快捷键、图标、备份校验和接触面规则。
+ */
+
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const ROOT = path.resolve(__dirname, '..');
+const SOURCE = fs.readFileSync(path.join(ROOT, 'assets', 'minicraft.js'), 'utf8');
+let passed = 0;
+
+function assert(condition, message = 'assertion failed') {
+  if (!condition) throw new Error(message);
+}
+
+function near(actual, expected, epsilon = 1e-6, message = '') {
+  assert(Math.abs(actual - expected) <= epsilon, message || `${actual} != ${expected} ± ${epsilon}`);
+}
+
+function extractFunction(name) {
+  const start = SOURCE.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`function not found: ${name}`);
+  const bodyStart = SOURCE.indexOf('{', start);
+  let depth = 0;
+  let i = bodyStart;
+  for (; i < SOURCE.length; i++) {
+    if (SOURCE[i] === '{') depth++;
+    else if (SOURCE[i] === '}' && --depth === 0) {
+      i++;
+      break;
+    }
+  }
+  return SOURCE.slice(start, i);
+}
+
+function context(extra = {}) {
+  return vm.createContext({console, ...extra});
+}
+
+function runFunctions(ctx, names) {
+  for (const name of names) vm.runInContext(extractFunction(name), ctx, {filename: `function:${name}`});
+}
+
+function loadTrackCatalog(ctx) {
+  const start = SOURCE.indexOf('const TRACK_SHAPES=');
+  const end = SOURCE.indexOf('  function trackDirection', start);
+  assert(start >= 0 && end > start, 'track catalog not found');
+  const code = SOURCE.slice(start, end).replace(/^  const /gm, 'var ').replace(/^const /gm, 'var ');
+  vm.runInContext(code, ctx, {filename: 'track-catalog'});
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+    console.log(`✓ ${name}`);
+  } catch (error) {
+    console.error(`✗ ${name}`);
+    throw error;
+  }
+}
+
+const GEOMETRY = [
+  'trackDirection', 'turntableDirectionLabel', 'rotateTrackOffset', 'trackCells',
+  'trackCenter', 'trackLocalToWorld', 'trackPorts', 'trackPortKey',
+  'trackRouteExit', 'trackAllowsEntry', 'trackPathRaw', 'trackRoutePairs',
+  'trackPlanningExits', 'templatePieceDefaults', 'transformTemplatePieces'
+];
+
+const EXPECTED_SHAPES = [
+  'straight', 'curve', 'cross', 'switch', 'stop', 'station', 'signal', 'ramp',
+  'bridge', 'power', 'lantern', 'crossing', 'oneway', 'drawbridge', 'whistle',
+  'rampcurve', 'tunnel', 'turntable'
+];
+
+test('轨道目录顺序、尺寸与存档索引保持兼容', () => {
+  const ctx = context({drawbridgeAngles: new Map()});
+  loadTrackCatalog(ctx);
+  runFunctions(ctx, GEOMETRY);
+  assert(JSON.stringify(Array.from(ctx.TRACK_SHAPES)) === JSON.stringify(EXPECTED_SHAPES), 'track shape order changed');
+  const size = shape => ctx.trackCells({id: 1, x: 10, y: 2, z: 10, rot: 0, shape, rampRise: true}).length;
+  assert(size('straight') === 2, 'straight must be 1x2');
+  assert(size('cross') === 1, 'cross must be 1x1');
+  assert(size('ramp') === 2, 'ramp must occupy 2 cells');
+  assert(size('rampcurve') === 4, 'curved ramp must occupy 2x2');
+  assert(size('tunnel') === 2, 'tunnel must be 1x2');
+  assert(size('turntable') === 1, 'turntable must be 1x1');
+});
+
+test('全部预定义模板在四个方向均无重叠、无断口', () => {
+  const ctx = context({drawbridgeAngles: new Map()});
+  loadTrackCatalog(ctx);
+  runFunctions(ctx, GEOMETRY);
+  assert(ctx.TRACK_TEMPLATES.length === 8, 'unexpected template count');
+  for (const template of ctx.TRACK_TEMPLATES) {
+    for (let rotation = 0; rotation < 4; rotation++) {
+      const pieces = Array.from(ctx.transformTemplatePieces(template, rotation), (piece, i) => ({...piece, id: i + 1}));
+      const cells = new Set();
+      const ports = [];
+      for (const piece of pieces) {
+        for (const cell of ctx.trackCells(piece)) {
+          const key = `${cell.x},${cell.y},${cell.z}`;
+          assert(!cells.has(key), `${template.id} overlap ${key} rotation ${rotation}`);
+          cells.add(key);
+        }
+        for (const port of ctx.trackPorts(piece)) ports.push({piece, port, key: ctx.trackPortKey(port)});
+      }
+      for (const current of ports) {
+        const linked = ports.some(other => other.piece.id !== current.piece.id && other.key === current.key && other.port.dir === (current.port.dir + 2) % 4);
+        assert(linked, `${template.id} loose port rotation ${rotation}`);
+      }
+    }
+  }
+  const hub = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'turntable_hub');
+  assert(hub && hub.pieces().length === 9, 'turntable hub template missing');
+});
+
+test('旋转轨双轴通行、方向标签、规划与图标', () => {
+  const ctx = context({drawbridgeAngles: new Map()});
+  loadTrackCatalog(ctx);
+  runFunctions(ctx, [...GEOMETRY, 'trackShortcutLabel', 'trackIconSvg']);
+  const piece = {id: 1, x: 0, y: 1, z: 0, rot: 0, shape: 'turntable', turntableAxis: 0};
+  assert(ctx.trackPorts(piece).length === 4, 'turntable needs four ports');
+  assert(ctx.trackAllowsEntry(piece, 0) && !ctx.trackAllowsEntry(piece, 1) && ctx.trackAllowsEntry(piece, 2), 'north/south axis invalid');
+  assert(ctx.trackRouteExit(piece, 0) === 2, 'turntable opposite exit invalid');
+  assert(JSON.stringify(ctx.trackRoutePairs(piece)) === '[[0,2]]', 'north/south pair invalid');
+  assert(ctx.turntableDirectionLabel(piece) === '南北', 'direction label invalid');
+  piece.turntableAxis = 1;
+  assert(!ctx.trackAllowsEntry(piece, 0) && ctx.trackAllowsEntry(piece, 1) && ctx.trackAllowsEntry(piece, 3), 'east/west axis invalid');
+  assert(JSON.stringify(ctx.trackRoutePairs(piece)) === '[[1,3]]', 'east/west pair invalid');
+  assert(ctx.trackPlanningExits(piece, 0).length === 0, 'inactive entry should not route');
+  piece.rot = 1;
+  assert(ctx.turntableDirectionLabel(piece) === '南北', 'rotated direction label invalid');
+  assert(ctx.trackShortcutLabel(17) === '⇧8', 'turntable shortcut changed');
+  assert(ctx.trackIconSvg('turntable').includes('<circle'), 'turntable icon missing');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 18, 'track icons must be unique');
+});
+
+test('旋转轨交互与列车占用锁定', () => {
+  let busy = false;
+  let rebuilds = 0;
+  let saves = 0;
+  let message = '';
+  const ctx = context({
+    trackNetworkCache: {cached: true},
+    canNetworkEdit: () => true,
+    trackPieceBusy: () => busy,
+    rebuildMesh: () => rebuilds++,
+    toast: text => { message = text; },
+    tone: () => {},
+    saveGame: () => saves++,
+    turntableDirectionLabel: piece => piece.turntableAxis === 1 ? '东西' : '南北'
+  });
+  runFunctions(ctx, ['interactTrack']);
+  const piece = {id: 9, shape: 'turntable', turntableAxis: 0};
+  ctx.interactTrack(piece);
+  assert(piece.turntableAxis === 1 && rebuilds === 1 && saves === 1, 'turntable did not rotate');
+  assert(ctx.trackNetworkCache === null && message.includes('东西'), 'turntable cache/message invalid');
+  busy = true;
+  ctx.interactTrack(piece);
+  assert(piece.turntableAxis === 1 && rebuilds === 1 && saves === 1, 'busy turntable rotated');
+  assert(message.includes('不能转向'), 'busy warning missing');
+});
+
+test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
+  const world = new Map();
+  const ctx = context({
+    W: 128, D: 128, MIN_BUILD_HEIGHT: -10, MAX_BUILD_HEIGHT: 128,
+    world, player: {x: 50, y: 1.01, z: 50, yaw: 0}, stock: {37: 1000},
+    trackTemplatePreview: null, trackPanelReturnToPause: true, selected: 1,
+    nextTrackId: 1, trackPieces: [], stats: {placed: 0}, buildHistory: [],
+    trackShapeMode: 0, drawbridgeAngles: new Map(),
+    key: (x, y, z) => `${x},${y},${z}`,
+    get: (x, y, z) => world.get(`${x},${y},${z}`) || 0,
+    set: (x, y, z, type) => type ? world.set(`${x},${y},${z}`, type) : world.delete(`${x},${y},${z}`),
+    insideWorld: (x, z) => x >= 0 && x < 128 && z >= 0 && z < 128,
+    canNetworkEdit: () => true, toast: () => {}, tone: () => {},
+    select: value => { ctx.selected = value; }, closeTrackPanel: () => {},
+    updateTrackModeHud: () => {}, unlock: () => {}, rebuildMesh: () => {},
+    updateInventory: () => {}, drawMinimap: () => {}, saveGame: () => {}, burst: () => {}
+  });
+  loadTrackCatalog(ctx);
+  runFunctions(ctx, [
+    ...GEOMETRY, 'trackBaseRotationFromYaw', 'templatePlacementAt', 'locateTrackTemplate',
+    'trackTemplatePiecesValid', 'beginTrackTemplatePreview', 'rotateTrackTemplatePreview',
+    'cancelTrackTemplatePreview', 'confirmTrackTemplatePreview'
+  ]);
+  ctx.beginTrackTemplatePreview('block_loop');
+  assert(ctx.trackTemplatePreview && ctx.selected === 37, 'preview did not start');
+  assert(world.size === 0 && ctx.trackPieces.length === 0, 'preview mutated world');
+  const originalTurn = ctx.trackTemplatePreview.turn;
+  ctx.rotateTrackTemplatePreview(1);
+  assert(ctx.trackTemplatePreview.turn === (originalTurn + 1) % 4, 'preview rotation failed');
+  const count = ctx.trackTemplatePreview.pieces.length;
+  const before = ctx.stock[37];
+  ctx.confirmTrackTemplatePreview();
+  assert(!ctx.trackTemplatePreview && ctx.trackPieces.length === count, 'preview confirmation failed');
+  assert(ctx.stock[37] === before - count, 'preview inventory accounting failed');
+  assert(ctx.buildHistory.at(-1).trackIds.length === count, 'template undo group missing');
+
+  world.clear();
+  ctx.trackPieces.length = 0;
+  ctx.buildHistory.length = 0;
+  ctx.stock[37] = 1000;
+  ctx.beginTrackTemplatePreview('tunnel_shuttle');
+  const blocked = ctx.trackCells(ctx.trackTemplatePreview.pieces[0])[0];
+  ctx.set(blocked.x, blocked.y, blocked.z, 3);
+  ctx.confirmTrackTemplatePreview();
+  assert(ctx.trackTemplatePreview && ctx.trackPieces.length === 0, 'occupied preview committed immediately');
+  assert(ctx.trackTemplatePiecesValid(ctx.trackTemplatePreview.pieces), 'occupied preview did not relocate');
+  ctx.confirmTrackTemplatePreview();
+  assert(!ctx.trackTemplatePreview && ctx.trackPieces.length === 9, 'relocated preview did not commit');
+
+  world.clear();
+  ctx.trackPieces.length = 0;
+  ctx.stock[37] = 1000;
+  ctx.beginTrackTemplatePreview('yard');
+  const cancelStock = ctx.stock[37];
+  ctx.cancelTrackTemplatePreview();
+  assert(!ctx.trackTemplatePreview && ctx.stock[37] === cancelStock && ctx.trackPieces.length === 0, 'cancel changed world');
+});
+
+test('自动闭塞信号检测方向、列车占用与净空', () => {
+  const world = new Map();
+  const ctx = context({
+    trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
+    trackNetworkCache: null, trackTrain: {placed: false, pieceId: null, wagonCount: 0},
+    extraTrains: [], drawbridgeAngles: new Map(), world,
+    primaryWagonPoses: () => [],
+    get: (x, y, z) => world.get(`${x},${y},${z}`) || 0,
+    key: (x, y, z) => `${x},${y},${z}`,
+    isSolidType: type => Boolean(type && type !== 37)
+  });
+  runFunctions(ctx, [
+    'trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld',
+    'trackPorts', 'trackPortKey', 'rebuildTrackGraph', 'connectedTrackPort', 'trackRouteExit',
+    'trackAllowsEntry', 'trackClearanceBlocked', 'trackPointOnPiece', 'trackPieceOccupied',
+    'trackSectionStatus', 'autoSignalRouteSafe', 'signalIsGreen', 'signalDisplayGreen', 'signalInfoText'
+  ]);
+  ctx.trackPieces.push(
+    {id: 1, x: 0, y: 1, z: -1, rot: 2, shape: 'stop'},
+    {id: 2, x: 0, y: 1, z: 0, rot: 0, shape: 'signal', signalMode: 0},
+    {id: 3, x: 0, y: 1, z: 1, rot: 0, shape: 'tunnel'},
+    {id: 4, x: 0, y: 1, z: 3, rot: 0, shape: 'signal', signalMode: 0},
+    {id: 5, x: 0, y: 1, z: 4, rot: 0, shape: 'stop'}
+  );
+  ctx.rebuildTrackGraph();
+  const signal = ctx.trackPieces[1];
+  assert(ctx.signalIsGreen(signal, 0) && ctx.signalIsGreen(signal, 1), 'safe signal should be green');
+  ctx.extraTrains.push({placed: true, pieceId: 3});
+  assert(!ctx.signalIsGreen(signal, 0) && ctx.signalIsGreen(signal, 1), 'occupied block direction invalid');
+  assert(ctx.signalInfoText(signal).includes('区间有列车'), 'occupied reason missing');
+  signal.signalMode = 1;
+  assert(ctx.signalIsGreen(signal, 0), 'forced green failed');
+  signal.signalMode = -1;
+  assert(!ctx.signalIsGreen(signal, 1), 'forced red failed');
+  signal.signalMode = 0;
+  ctx.extraTrains.length = 0;
+  world.set('0,2,1', 3);
+  assert(!ctx.signalIsGreen(signal, 0) && ctx.signalInfoText(signal).includes('净空不足'), 'clearance signal failed');
+});
+
+test('轨道可站立表面：直轨、曲线、坡道、升降桥与空间索引', () => {
+  const ctx = context({
+    trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
+    trackNetworkCache: null, trackTrain: {placed: false}, drawbridgeAngles: new Map(),
+    radius: 0.28, player: {onGround: false},
+    key: (x, y, z) => `${x},${y},${z}`,
+    collides: () => false
+  });
+  runFunctions(ctx, [
+    'trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld',
+    'trackPorts', 'trackPortKey', 'rebuildTrackGraph', 'findTrackPiece', 'trackRouteExit',
+    'trackPathRaw', 'trackRoutePairs', 'nearbyTrackPieces', 'trackSurfaceHeight', 'trackLandingHeight'
+  ]);
+  const flat = {id: 1, x: 10, y: 5, z: 10, rot: 0, shape: 'straight'};
+  const ramp = {id: 2, x: 20, y: 2, z: 20, rot: 0, shape: 'ramp', rampRise: true};
+  const curve = {id: 3, x: 30, y: 7, z: 30, rot: 0, shape: 'curve'};
+  const bridge = {id: 4, x: 40, y: 9, z: 40, rot: 0, shape: 'drawbridge', drawbridgeOpen: false};
+  const turntable = {id: 5, x: 50, y: 3, z: 50, rot: 0, shape: 'turntable', turntableAxis: 0};
+  ctx.trackPieces.push(flat, ramp, curve, bridge, turntable);
+  ctx.rebuildTrackGraph();
+  const center = ctx.trackCenter(flat);
+  near(ctx.trackSurfaceHeight(flat, center.x, center.z), 5.255, 0.001);
+  assert(ctx.trackSurfaceHeight(flat, center.x + 0.7, center.z) === null, 'outside rail width is walkable');
+  near(ctx.trackLandingHeight(center.x, center.z, 6, 4), 5.255, 0.001);
+  assert(ctx.trackLandingHeight(center.x, center.z, 4, 3) === null, 'player landed upward from below');
+
+  for (const piece of [ramp, curve]) {
+    const [entry, exit] = ctx.trackRoutePairs(piece)[0];
+    for (const u of [0.15, 0.35, 0.6, 0.85]) {
+      const point = ctx.trackPathRaw(piece, entry, exit, u);
+      near(ctx.trackSurfaceHeight(piece, point.x, point.z), point.y, 0.06, `${piece.shape} surface mismatch`);
+    }
+  }
+  const low = ctx.trackPathRaw(ramp, 0, 1, 0);
+  const high = ctx.trackPathRaw(ramp, 0, 1, 1);
+  assert(high.y - low.y > 0.95, 'ramp elevation missing');
+  const bridgeCenter = ctx.trackCenter(bridge);
+  near(ctx.trackSurfaceHeight(bridge, bridgeCenter.x, bridgeCenter.z), 9.255, 0.001);
+  bridge.drawbridgeOpen = true;
+  assert(ctx.trackSurfaceHeight(bridge, bridgeCenter.x, bridgeCenter.z) === null, 'open bridge remains walkable');
+  bridge.drawbridgeOpen = false;
+  ctx.drawbridgeAngles.set(bridge.id, 0.3);
+  assert(ctx.trackSurfaceHeight(bridge, bridgeCenter.x, bridgeCenter.z) === null, 'moving bridge remains horizontal');
+  for (const cell of ctx.trackCells(ramp)) assert(ctx.findTrackPiece(cell.x, cell.y, cell.z) === ramp, 'track cell index failed');
+  const turnCenter = ctx.trackCenter(turntable);
+  near(ctx.trackSurfaceHeight(turntable, turnCenter.x, turnCenter.z), 3.255, 0.001);
+});
+
+test('轨道快捷模式覆盖18种图标与数字映射，并返回原积木', () => {
+  const palette = {hidden: false, innerHTML: '', classList: {toggle(name, value) { if (name === 'hidden') palette.hidden = value; }}};
+  const ctx = context({
+    trackKeyboardMode: false, selected: 2, lastNonTrackSelected: 2, trackTemplatePreview: null,
+    trackShapeMode: 0, saves: 0,
+    document: {getElementById: id => { assert(id === 'trackKeyboardPalette'); return palette; }},
+    stopMining: () => {}, stopPlacing: () => {}, updateTrackModeHud: () => {}, toast: () => {},
+    saveGame: () => { ctx.saves++; }
+  });
+  loadTrackCatalog(ctx);
+  ctx.select = value => {
+    ctx.selected = value;
+    if (value !== 37) {
+      ctx.lastNonTrackSelected = value;
+      ctx.trackKeyboardMode = false;
+    }
+  };
+  runFunctions(ctx, ['trackShortcutLabel', 'trackIconSvg', 'updateTrackKeyboardPalette', 'chooseTrackShortcut', 'toggleTrackKeyboardMode']);
+  ctx.toggleTrackKeyboardMode();
+  assert(ctx.trackKeyboardMode && ctx.selected === 37, 'keyboard mode did not start');
+  for (let digit = 1; digit <= 9; digit++) {
+    assert(ctx.chooseTrackShortcut(`Digit${digit}`, false), `Digit${digit} rejected`);
+    assert(ctx.trackShapeMode === digit - 1, `Digit${digit} mapping invalid`);
+  }
+  assert(ctx.chooseTrackShortcut('Digit0', false) && ctx.trackShapeMode === 9, 'Digit0 mapping invalid');
+  for (let digit = 1; digit <= 8; digit++) {
+    assert(ctx.chooseTrackShortcut(`Digit${digit}`, true), `Shift+${digit} rejected`);
+    assert(ctx.trackShapeMode === 9 + digit, `Shift+${digit} mapping invalid`);
+  }
+  ctx.updateTrackKeyboardPalette();
+  assert(!palette.hidden, 'palette hidden in keyboard mode');
+  assert((palette.innerHTML.match(/data-track-key-index=/g) || []).length === 18, 'palette item count invalid');
+  assert(palette.innerHTML.includes('旋转轨') && palette.innerHTML.includes('⇧8'), 'new rail absent from palette');
+  assert(new Set(Array.from(ctx.TRACK_SHAPES, ctx.trackIconSvg)).size === 18, 'icons are not unique');
+  ctx.toggleTrackKeyboardMode();
+  assert(!ctx.trackKeyboardMode && ctx.selected === 2, 'keyboard mode did not restore previous block');
+});
+
+test('道口栏杆阻挡道路而不是火车', () => {
+  assert(SOURCE.includes('post(-.53,-.55);post(.53,.55)'), 'crossing posts changed unexpectedly');
+  const arms = [[-0.53, -0.55, 0], [0.53, 0.55, Math.PI]];
+  for (const [baseX, baseZ, yaw] of arms) {
+    const points = [0, 1].map(z => [baseX - z * Math.sin(yaw), baseZ + z * Math.cos(yaw)]);
+    const dx = Math.abs(points[1][0] - points[0][0]);
+    const dz = Math.abs(points[1][1] - points[0][1]);
+    assert(dz > 0.95 && dx < 1e-6, 'gate is not parallel to track');
+    assert(Math.min(...points.map(point => Math.abs(point[0]))) > 0.45, 'gate blocks train envelope');
+    assert(Math.min(...points.map(point => point[1])) < -0.34 && Math.max(...points.map(point => point[1])) > 0.34, 'gate does not span road lanes');
+  }
+});
+
+test('水、玻璃与轨道接触面规则保持无闪烁', () => {
+  const ctx = context();
+  runFunctions(ctx, ['occludesCubeFace', 'hidesWaterContactFace', 'hidesGlassContactFace']);
+  assert(!ctx.occludesCubeFace(37), 'track incorrectly hides neighbor face');
+  assert(!ctx.occludesCubeFace(18) && !ctx.occludesCubeFace(34), 'transparent block occlusion regressed');
+  assert(!ctx.hidesWaterContactFace(37), 'track incorrectly hides water contact');
+  assert(ctx.hidesWaterContactFace(34), 'glass should hide internal water contact');
+  assert(ctx.hidesGlassContactFace(34) && ctx.hidesGlassContactFace(3), 'glass contact hiding regressed');
+  assert(!ctx.hidesGlassContactFace(37), 'track incorrectly hides glass contact');
+});
+
+test('备份JSON校验接受有效存档并拒绝损坏数据', () => {
+  const ctx = context();
+  runFunctions(ctx, ['validateBackupText']);
+  const valid = JSON.stringify({v: 3, world: [['1,0,1', 1]], marker: 'ok'});
+  assert(ctx.validateBackupText(valid).marker === 'ok', 'valid backup rejected');
+  for (const bad of [
+    '{not-json',
+    JSON.stringify({v: 2, world: []}),
+    JSON.stringify({v: 3, world: [['bad']]}),
+    JSON.stringify({v: 3, world: [[4, 1]]})
+  ]) {
+    let rejected = false;
+    try { ctx.validateBackupText(bad); } catch (_) { rejected = true; }
+    assert(rejected, `invalid backup accepted: ${bad.slice(0, 30)}`);
+  }
+});
+
+console.log(`\n客户端回归测试完成：${passed} 组全部通过。`);
