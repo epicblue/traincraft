@@ -336,6 +336,40 @@ test('木质车库自动停车、直接通过开关与主/附加列车挂钩', (
   assert(SOURCE.includes("piece.shape==='depot'?'车库保护'"), 'depot signal protection missing');
 });
 
+test('车站支持1/2/4/8秒停靠时刻与主/附加列车调度', () => {
+  let updates = 0;
+  let saves = 0;
+  let message = '';
+  const controls = context({
+    updateTrackPanel: () => updates++, saveGame: () => saves++,
+    toast: text => { message = text; }, tone: () => {},
+    trackStationDisplayName: piece => piece.stationName || '车站'
+  });
+  runFunctions(controls, ['stationDwellSeconds', 'cycleStationDwell']);
+  const station = {id: 1, shape: 'station', stationName: '林间站'};
+  assert(controls.stationDwellSeconds(station) === 2, 'default dwell should be 2 seconds');
+  controls.cycleStationDwell(station);
+  assert(station.stationDwell === 4 && updates === 1 && saves === 1 && message.includes('4秒'), 'station dwell cycle failed');
+  station.stationDwell = 8;
+
+  const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.4, speed: 1, cruiseSpeed: 1, running: true, wait: 0, distance: 0, stationServed: false, powerServed: false, whistleServed: false};
+  const motion = context({
+    trackPieces: [station],
+    trainObstacleDistance: () => null, extraTrainSpeedLimit: () => 1,
+    trackPathLength: () => 1, setExtraTrainPose: () => {}, signalIsGreen: () => true,
+    stationDwellSeconds: piece => piece.stationDwell || 2,
+    triggerDetector: () => {}, connectedTrackPort: () => null,
+    trackAllowsEntry: () => true, trackClearanceBlocked: () => false,
+    player: {x: 100, z: 100}, tone: () => {}, setTimeout: () => {}
+  });
+  runFunctions(motion, ['updateExtraTrain']);
+  motion.updateExtraTrain(train, 0.2);
+  assert(train.t === 0.5 && train.wait === 8 && train.speed === 0 && train.running === true, 'extra train did not honor station dwell');
+  assert(SOURCE.includes('const dwell=stationDwellSeconds(piece);trackTrain.wait='), 'primary train dwell hook missing');
+  assert(SOURCE.includes("if(lookedTrack?.shape==='station'&&shifted)"), 'Shift+E dwell hook missing');
+  assert(SOURCE.includes('data-station-dwell'), 'station panel dwell control missing');
+});
+
 test('线路可保存为个人蓝图、持久化、重复摆放与删除', () => {
   let saves = 0;
   let updates = 0;
@@ -347,25 +381,28 @@ test('线路可保存为个人蓝图、持久化、重复摆放与删除', () =>
   });
   loadTrackCatalog(ctx);
   runFunctions(ctx, [
-    ...GEOMETRY, 'allTrackTemplates', 'findTrackTemplate', 'trackTemplateSpecFromPiece',
+    ...GEOMETRY, 'allTrackTemplates', 'findTrackTemplate', 'stationDwellSeconds', 'trackTemplateSpecFromPiece',
     'saveTrackLineTemplate', 'deleteCustomTrackTemplate', 'loadCustomTrackTemplates'
   ]);
   const pieces = [
     {id: 11, x: 20, y: 4, z: 30, rot: 0, shape: 'straight'},
     {id: 12, x: 20, y: 4, z: 32, rot: 0, shape: 'detector', detectorMode: 3, detectorCount: 99, detectorTargetId: 77},
-    {id: 13, x: 20, y: 4, z: 33, rot: 0, shape: 'depot', depotStop: false}
+    {id: 13, x: 20, y: 4, z: 33, rot: 0, shape: 'depot', depotStop: false},
+    {id: 14, x: 20, y: 4, z: 35, rot: 0, shape: 'station', stationStop: true, stationDwell: 8, stationName: '夜班站'}
   ];
   ctx.line = {key: 7, name: '山谷线', pieces, minY: 4, maxY: 4};
   ctx.saveTrackLineTemplate(7);
   assert(ctx.customTrackTemplates.length === 1 && saves === 1 && updates === 1, 'custom template was not saved');
   const saved = ctx.customTrackTemplates[0];
-  assert(saved.name === '山谷线蓝图' && saved.specs.length === 3 && message.includes('已保存'), 'custom template metadata invalid');
+  assert(saved.name === '山谷线蓝图' && saved.specs.length === 4 && message.includes('已保存'), 'custom template metadata invalid');
   assert(Math.min(...saved.specs.map(spec => spec.x)) === 0 && Math.min(...saved.specs.map(spec => spec.y)) === 0 && Math.min(...saved.specs.map(spec => spec.z)) === 0, 'custom template was not normalized');
   const sensor = saved.specs.find(spec => spec.shape === 'detector');
   const depot = saved.specs.find(spec => spec.shape === 'depot');
   assert(sensor.detectorMode === 3 && sensor.detectorTargetId === undefined, 'detector blueprint kept runtime target/count');
+  const station = saved.specs.find(spec => spec.shape === 'station');
   assert(depot.depotStop === false, 'depot mode was not preserved');
-  assert(ctx.allTrackTemplates().length === 11 && ctx.findTrackTemplate(saved.id)?.pieces().length === 3, 'custom template is not placeable');
+  assert(station.stationDwell === 8 && station.stationName === '夜班站', 'station timetable was not preserved');
+  assert(ctx.allTrackTemplates().length === 11 && ctx.findTrackTemplate(saved.id)?.pieces().length === 4, 'custom template is not placeable');
 
   const serialized = JSON.parse(JSON.stringify(ctx.customTrackTemplates));
   const originalId = saved.id;
