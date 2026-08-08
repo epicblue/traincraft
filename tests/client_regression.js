@@ -336,12 +336,54 @@ test('木质车库自动停车、直接通过开关与主/附加列车挂钩', (
   assert(SOURCE.includes("piece.shape==='depot'?'车库保护'"), 'depot signal protection missing');
 });
 
+test('线路可保存为个人蓝图、持久化、重复摆放与删除', () => {
+  let saves = 0;
+  let updates = 0;
+  let message = '';
+  const ctx = context({
+    customTrackTemplates: [], trackTemplatePreview: null, line: null,
+    trackNetworks: () => [ctx.line], saveGame: () => saves++, updateTrackPanel: () => updates++,
+    toast: text => { message = text; }, tone: () => {}, cancelTrackTemplatePreview: () => {}
+  });
+  loadTrackCatalog(ctx);
+  runFunctions(ctx, [
+    ...GEOMETRY, 'allTrackTemplates', 'findTrackTemplate', 'trackTemplateSpecFromPiece',
+    'saveTrackLineTemplate', 'deleteCustomTrackTemplate', 'loadCustomTrackTemplates'
+  ]);
+  const pieces = [
+    {id: 11, x: 20, y: 4, z: 30, rot: 0, shape: 'straight'},
+    {id: 12, x: 20, y: 4, z: 32, rot: 0, shape: 'detector', detectorMode: 3, detectorCount: 99, detectorTargetId: 77},
+    {id: 13, x: 20, y: 4, z: 33, rot: 0, shape: 'depot', depotStop: false}
+  ];
+  ctx.line = {key: 7, name: '山谷线', pieces, minY: 4, maxY: 4};
+  ctx.saveTrackLineTemplate(7);
+  assert(ctx.customTrackTemplates.length === 1 && saves === 1 && updates === 1, 'custom template was not saved');
+  const saved = ctx.customTrackTemplates[0];
+  assert(saved.name === '山谷线蓝图' && saved.specs.length === 3 && message.includes('已保存'), 'custom template metadata invalid');
+  assert(Math.min(...saved.specs.map(spec => spec.x)) === 0 && Math.min(...saved.specs.map(spec => spec.y)) === 0 && Math.min(...saved.specs.map(spec => spec.z)) === 0, 'custom template was not normalized');
+  const sensor = saved.specs.find(spec => spec.shape === 'detector');
+  const depot = saved.specs.find(spec => spec.shape === 'depot');
+  assert(sensor.detectorMode === 3 && sensor.detectorTargetId === undefined, 'detector blueprint kept runtime target/count');
+  assert(depot.depotStop === false, 'depot mode was not preserved');
+  assert(ctx.allTrackTemplates().length === 11 && ctx.findTrackTemplate(saved.id)?.pieces().length === 3, 'custom template is not placeable');
+
+  const serialized = JSON.parse(JSON.stringify(ctx.customTrackTemplates));
+  const originalId = saved.id;
+  ctx.loadCustomTrackTemplates(serialized);
+  assert(ctx.customTrackTemplates.length === 1 && ctx.customTrackTemplates[0].id === originalId, 'custom template persistence changed id');
+  ctx.deleteCustomTrackTemplate(originalId);
+  assert(ctx.customTrackTemplates.length === 0 && message.includes('已删除'), 'custom template deletion failed');
+
+  ctx.loadCustomTrackTemplates([{id: 'bad', name: 'bad', specs: [{x: 0, y: 0, z: 0, shape: 'not-a-track'}]}]);
+  assert(ctx.customTrackTemplates.length === 1 && ctx.customTrackTemplates[0].specs[0].shape === 'straight', 'custom template sanitizer fallback failed');
+});
+
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
   const world = new Map();
   const ctx = context({
     W: 128, D: 128, MIN_BUILD_HEIGHT: -10, MAX_BUILD_HEIGHT: 128,
     world, player: {x: 50, y: 1.01, z: 50, yaw: 0}, stock: {37: 1000},
-    trackTemplatePreview: null, trackPanelReturnToPause: true, selected: 1,
+    trackTemplatePreview: null, customTrackTemplates: [], trackPanelReturnToPause: true, selected: 1,
     nextTrackId: 1, trackPieces: [], stats: {placed: 0}, buildHistory: [],
     trackShapeMode: 0, drawbridgeAngles: new Map(),
     key: (x, y, z) => `${x},${y},${z}`,
