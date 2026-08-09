@@ -415,6 +415,48 @@ test('线路可保存为个人蓝图、持久化、重复摆放与删除', () =>
   assert(ctx.customTrackTemplates.length === 1 && ctx.customTrackTemplates[0].specs[0].shape === 'straight', 'custom template sanitizer fallback failed');
 });
 
+test('线路管理支持二次确认整线拆除、库存返还与Z整线恢复', () => {
+  let now = 1000;
+  let message = '';
+  const world = new Map();
+  const pieces = [
+    {id: 1, x: 10, y: 1, z: 10, rot: 0, shape: 'straight', lineName: '测试线'},
+    {id: 2, x: 10, y: 1, z: 12, rot: 0, shape: 'depot', lineName: '测试线'}
+  ];
+  const line = {key: 1, name: '测试线', pieces};
+  const ctx = context({
+    trackPieces: [...pieces], trackNetworkCache: null, trackLineDeleteArmedKey: null, trackLineDeleteArmedUntil: 0,
+    trackEditUndo: [], trackEditRedo: [], selectedTrackLineKey: null, trackInspectionTarget: null,
+    buildHistory: [], stock: {37: 10}, nextTrackId: 3, world,
+    performance: {now: () => now}, trackNetworks: () => [line], canNetworkEdit: () => true,
+    trackPieceBusy: () => false, itemCap: () => 9999,
+    key: (x, y, z) => `${x},${y},${z}`,
+    get: (x, y, z) => world.get(`${x},${y},${z}`) || 0,
+    set: (x, y, z, type) => type ? world.set(`${x},${y},${z}`, type) : world.delete(`${x},${y},${z}`),
+    updateTrackPanel: () => {}, rebuildMesh: () => {}, updateInventory: () => {}, drawMinimap: () => {}, saveGame: () => {},
+    toast: text => { message = text; }, tone: () => {}, setTimeout: () => {},
+    document: {getElementById: () => ({classList: {contains: () => true}})}
+  });
+  runFunctions(ctx, ['trackDirection', 'rotateTrackOffset', 'trackCells', 'removeTrackLine', 'undoBuild']);
+  for (const piece of pieces) for (const cell of ctx.trackCells(piece)) ctx.set(cell.x, cell.y, cell.z, 37);
+  const occupiedBefore = world.size;
+  ctx.removeTrackLine(1);
+  assert(ctx.trackPieces.length === 2 && ctx.trackLineDeleteArmedKey === 1 && message.includes('再次点击'), 'line removal confirmation was skipped');
+  now = 1200;
+  ctx.removeTrackLine(1);
+  assert(ctx.trackPieces.length === 0 && world.size === 0, 'confirmed line was not removed');
+  assert(ctx.stock[37] === 12 && ctx.buildHistory.at(-1).restoreTracks.length === 2, 'line removal inventory/history invalid');
+  ctx.undoBuild();
+  assert(ctx.trackPieces.length === 2 && world.size === occupiedBefore && ctx.stock[37] === 10, 'Z did not restore removed line');
+
+  ctx.trackPieceBusy = () => true;
+  now = 2000;
+  ctx.removeTrackLine(1);
+  now = 2100;
+  ctx.removeTrackLine(1);
+  assert(ctx.trackPieces.length === 2 && message.includes('仍有列车或车厢'), 'busy line was removed');
+});
+
 test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () => {
   const world = new Map();
   const ctx = context({
