@@ -76,7 +76,7 @@ def test_backup_gzip_roundtrip() -> None:
         "worldVersion": 13,
         "worldWidth": 128,
         "undergroundDepth": 10,
-        "trackFeatureVersion": 40,
+        "trackFeatureVersion": 41,
         "world": [["1,0,1", 1], ["4,1,4", 37], ["4,-11,4", 36]],
         "trackPieces": [
             {"id": 1, "x": 4, "y": 1, "z": 4, "shape": "turntable", "turntableAxis": 1, "turntableExit": 1},
@@ -195,10 +195,10 @@ async def test_http_assets_async() -> None:
         app = SERVER.make_app(ROOT, Path(tmp))
         async with TestClient(TestServer(app)) as client:
             cases = [
-                ("/", "text/html", "assets/minicraft.js?v=40"),
+                ("/", "text/html", "assets/minicraft.js?v=41"),
                 ("/index.html", "text/html", "MINICRAFT"),
-                ("/assets/minicraft.css?v=40", "text/css", "#trackKeyboardPalette"),
-                ("/assets/minicraft.js?v=40", "javascript", "trackFeatureVersion:40"),
+                ("/assets/minicraft.css?v=41", "text/css", "#trackKeyboardPalette"),
+                ("/assets/minicraft.js?v=41", "javascript", "trackFeatureVersion:41"),
                 ("/api/rooms", "application/json", "rooms"),
             ]
             for url, content_type, needle in cases:

@@ -100,7 +100,7 @@ test('全部预定义模板在四个方向均无重叠、无断口', () => {
   const ctx = context({drawbridgeAngles: new Map()});
   loadTrackCatalog(ctx);
   runFunctions(ctx, GEOMETRY);
-  assert(ctx.TRACK_TEMPLATES.length === 10, 'unexpected template count');
+  assert(ctx.TRACK_TEMPLATES.length === 13, 'unexpected template count');
   for (const template of ctx.TRACK_TEMPLATES) {
     for (let rotation = 0; rotation < 4; rotation++) {
       const pieces = Array.from(ctx.transformTemplatePieces(template, rotation), (piece, i) => ({...piece, id: i + 1}));
@@ -126,6 +126,12 @@ test('全部预定义模板在四个方向均无重叠、无断口', () => {
   assert(sorter && sorter.pieces().length === 8 && sorter.pieces().some(piece => piece.shape === 'detector' && piece.detectorMode === 2), 'detector sorter template missing');
   const depot = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'double_depot');
   assert(depot && depot.pieces().length === 7 && depot.pieces().filter(piece => piece.shape === 'depot').length === 2, 'double depot template missing');
+  const lake = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'lake_bridges');
+  assert(lake && lake.pieces().length === 10 && lake.pieces().filter(piece => piece.shape === 'drawbridge').length === 2, 'lake bridge template missing');
+  const sensorHub = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'sensor_turntable');
+  assert(sensorHub && sensorHub.pieces().length === 13 && sensorHub.pieces().filter(piece => piece.shape === 'detector' && piece.detectorMode === 3).length === 4, 'sensor turntable template missing');
+  const winding = Array.from(ctx.TRACK_TEMPLATES).find(template => template.id === 'winding_adventure');
+  assert(winding && ['tunnel','bridge','drawbridge'].every(shape => winding.pieces().some(piece => piece.shape === shape)), 'winding adventure template missing');
 });
 
 test('旋转轨四向出口、中心转向路径、方向标签、规划与图标', () => {
@@ -418,7 +424,7 @@ test('线路可保存为个人蓝图、持久化、重复摆放与删除', () =>
   const station = saved.specs.find(spec => spec.shape === 'station');
   assert(depot.depotStop === false, 'depot mode was not preserved');
   assert(station.stationDwell === 8 && station.stationOrder === 2 && station.stationService === false && station.stationName === '夜班站', 'station timetable was not preserved');
-  assert(ctx.allTrackTemplates().length === 11 && ctx.findTrackTemplate(saved.id)?.pieces().length === 4, 'custom template is not placeable');
+  assert(ctx.allTrackTemplates().length === 14 && ctx.findTrackTemplate(saved.id)?.pieces().length === 4, 'custom template is not placeable');
 
   const serialized = JSON.parse(JSON.stringify(ctx.customTrackTemplates));
   const originalId = saved.id;
