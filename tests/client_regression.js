@@ -341,11 +341,13 @@ test('车站支持1/2/4/8秒停靠时刻与主/附加列车调度', () => {
   let saves = 0;
   let message = '';
   const controls = context({
+    trackPieces: [], line: null, trackNetworkCache: {cached: true},
+    trackLineForPiece: () => controls.line,
     updateTrackPanel: () => updates++, saveGame: () => saves++,
     toast: text => { message = text; }, tone: () => {},
     trackStationDisplayName: piece => piece.stationName || '车站'
   });
-  runFunctions(controls, ['stationDwellSeconds', 'stationServiceEnabled', 'serviceStationPieces', 'cycleStationDwell', 'toggleStationService']);
+  runFunctions(controls, ['stationDwellSeconds', 'stationServiceEnabled', 'serviceStationPieces', 'cycleStationDwell', 'toggleStationService', 'moveStationOrder']);
   const station = {id: 1, shape: 'station', stationName: '林间站'};
   assert(controls.stationDwellSeconds(station) === 2, 'default dwell should be 2 seconds');
   controls.cycleStationDwell(station);
@@ -353,8 +355,14 @@ test('车站支持1/2/4/8秒停靠时刻与主/附加列车调度', () => {
   assert(controls.stationServiceEnabled(station), 'station should join service by default');
   controls.toggleStationService(station);
   assert(station.stationService === false && message.includes('自动巡线跳过'), 'station service exclusion failed');
-  const other = {id: 2, shape: 'station', stationService: true};
+  const other = {id: 2, shape: 'station', stationName: '湖畔站', stationService: true};
+  const third = {id: 3, shape: 'station', stationName: '山顶站', stationService: true};
   assert(controls.serviceStationPieces({stationPieces: [station, other]}).length === 1, 'service station filter failed');
+  controls.trackPieces = [station, other, third];
+  controls.line = {stationPieces: [station, other, third]};
+  controls.moveStationOrder(third.id, -1);
+  assert(station.stationOrder === 0 && third.stationOrder === 1 && other.stationOrder === 2, 'station order move failed');
+  assert(message.includes('巡线第 2 站'), 'station order feedback missing');
   station.stationDwell = 8;
 
   const train = {placed: true, pieceId: 1, entry: 0, exit: 1, t: 0.4, speed: 1, cruiseSpeed: 1, running: true, wait: 0, distance: 0, stationServed: false, powerServed: false, whistleServed: false};
@@ -373,8 +381,9 @@ test('车站支持1/2/4/8秒停靠时刻与主/附加列车调度', () => {
   assert(SOURCE.includes('const dwell=stationDwellSeconds(piece);trackTrain.wait='), 'primary train dwell hook missing');
   assert(SOURCE.includes("if(lookedTrack?.shape==='station'&&shifted)"), 'Shift+E dwell hook missing');
   assert(SOURCE.includes("if(lookedTrack?.shape==='station'&&controlled)"), 'Ctrl+E service hook missing');
-  assert(SOURCE.includes('data-station-dwell') && SOURCE.includes('data-station-service'), 'station panel timetable controls missing');
+  assert(SOURCE.includes('data-station-dwell') && SOURCE.includes('data-station-service') && SOURCE.includes('data-station-order-up'), 'station panel timetable controls missing');
   assert(SOURCE.includes('stations=serviceStationPieces(line)'), 'auto service station filtering missing');
+  assert(SOURCE.includes('Number.isFinite(a.stationOrder)'), 'station order sorting missing');
 });
 
 test('线路可保存为个人蓝图、持久化、重复摆放与删除', () => {
@@ -395,7 +404,7 @@ test('线路可保存为个人蓝图、持久化、重复摆放与删除', () =>
     {id: 11, x: 20, y: 4, z: 30, rot: 0, shape: 'straight'},
     {id: 12, x: 20, y: 4, z: 32, rot: 0, shape: 'detector', detectorMode: 3, detectorCount: 99, detectorTargetId: 77},
     {id: 13, x: 20, y: 4, z: 33, rot: 0, shape: 'depot', depotStop: false},
-    {id: 14, x: 20, y: 4, z: 35, rot: 0, shape: 'station', stationStop: true, stationDwell: 8, stationService: false, stationName: '夜班站'}
+    {id: 14, x: 20, y: 4, z: 35, rot: 0, shape: 'station', stationStop: true, stationDwell: 8, stationOrder: 2, stationService: false, stationName: '夜班站'}
   ];
   ctx.line = {key: 7, name: '山谷线', pieces, minY: 4, maxY: 4};
   ctx.saveTrackLineTemplate(7);
@@ -408,7 +417,7 @@ test('线路可保存为个人蓝图、持久化、重复摆放与删除', () =>
   assert(sensor.detectorMode === 3 && sensor.detectorTargetId === undefined, 'detector blueprint kept runtime target/count');
   const station = saved.specs.find(spec => spec.shape === 'station');
   assert(depot.depotStop === false, 'depot mode was not preserved');
-  assert(station.stationDwell === 8 && station.stationService === false && station.stationName === '夜班站', 'station timetable was not preserved');
+  assert(station.stationDwell === 8 && station.stationOrder === 2 && station.stationService === false && station.stationName === '夜班站', 'station timetable was not preserved');
   assert(ctx.allTrackTemplates().length === 11 && ctx.findTrackTemplate(saved.id)?.pieces().length === 4, 'custom template is not placeable');
 
   const serialized = JSON.parse(JSON.stringify(ctx.customTrackTemplates));
@@ -522,7 +531,7 @@ test('轨道模板幽灵预览、旋转、占用迁移、确认与取消', () =>
   assert(!ctx.trackTemplatePreview && ctx.stock[37] === cancelStock && ctx.trackPieces.length === 0, 'cancel changed world');
 });
 
-test('自动闭塞信号检测方向、列车占用与净空', () => {
+test('自动闭塞信号检测方向、保护区间追踪、列车占用与净空', () => {
   const world = new Map();
   const ctx = context({
     trackPieces: [], trackPortIndex: new Map(), trackCellIndex: new Map(), trackColumnIndex: new Map(),
@@ -537,7 +546,7 @@ test('自动闭塞信号检测方向、列车占用与净空', () => {
     'trackDirection', 'rotateTrackOffset', 'trackCells', 'trackCenter', 'trackLocalToWorld',
     'trackPorts', 'trackPortKey', 'rebuildTrackGraph', 'connectedTrackPort', 'trackRouteExit',
     'trackAllowsEntry', 'trackClearanceBlocked', 'trackPointOnPiece', 'trackPieceOccupied',
-    'trackSectionStatus', 'autoSignalRouteSafe', 'signalIsGreen', 'signalDisplayGreen', 'signalInfoText'
+    'trackSectionStatus', 'signalSectionTrace', 'autoSignalRouteSafe', 'signalIsGreen', 'signalDisplayGreen', 'signalInfoText'
   ]);
   ctx.trackPieces.push(
     {id: 1, x: 0, y: 1, z: -1, rot: 2, shape: 'stop'},
@@ -549,6 +558,11 @@ test('自动闭塞信号检测方向、列车占用与净空', () => {
   ctx.rebuildTrackGraph();
   const signal = ctx.trackPieces[1];
   assert(ctx.signalIsGreen(signal, 0) && ctx.signalIsGreen(signal, 1), 'safe signal should be green');
+  const forwardTrace = ctx.signalSectionTrace(signal, 0);
+  const reverseTrace = ctx.signalSectionTrace(signal, 1);
+  assert(forwardTrace.status.safe && forwardTrace.steps.map(step => step.piece.id).join(',') === '2,3,4', 'forward signal trace invalid');
+  assert(reverseTrace.status.safe && reverseTrace.steps.map(step => step.piece.id).join(',') === '2,1', 'reverse signal trace invalid');
+  assert(SOURCE.includes('function drawSignalSectionGuides()'), '3D signal section guide missing');
   ctx.extraTrains.push({placed: true, pieceId: 3});
   assert(!ctx.signalIsGreen(signal, 0) && ctx.signalIsGreen(signal, 1), 'occupied block direction invalid');
   assert(ctx.signalInfoText(signal).includes('区间有列车'), 'occupied reason missing');

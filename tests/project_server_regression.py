@@ -76,13 +76,13 @@ def test_backup_gzip_roundtrip() -> None:
         "worldVersion": 13,
         "worldWidth": 128,
         "undergroundDepth": 10,
-        "trackFeatureVersion": 38,
+        "trackFeatureVersion": 40,
         "world": [["1,0,1", 1], ["4,1,4", 37], ["4,-11,4", 36]],
         "trackPieces": [
             {"id": 1, "x": 4, "y": 1, "z": 4, "shape": "turntable", "turntableAxis": 1, "turntableExit": 1},
             {"id": 2, "x": 5, "y": 1, "z": 4, "shape": "detector", "detectorMode": 3, "detectorCount": 7, "detectorTargetId": 1},
             {"id": 3, "x": 6, "y": 1, "z": 4, "shape": "depot", "depotStop": True},
-            {"id": 4, "x": 8, "y": 1, "z": 4, "shape": "station", "stationStop": True, "stationDwell": 8, "stationService": False},
+            {"id": 4, "x": 8, "y": 1, "z": 4, "shape": "station", "stationStop": True, "stationDwell": 8, "stationOrder": 3, "stationService": False},
         ],
         "customTrackTemplates": [{"id": "custom-test", "name": "测试蓝图", "specs": [{"x": 0, "y": 0, "z": 0, "rot": 0, "shape": "straight"}]}],
     }
@@ -195,10 +195,10 @@ async def test_http_assets_async() -> None:
         app = SERVER.make_app(ROOT, Path(tmp))
         async with TestClient(TestServer(app)) as client:
             cases = [
-                ("/", "text/html", "assets/minicraft.js?v=38"),
+                ("/", "text/html", "assets/minicraft.js?v=40"),
                 ("/index.html", "text/html", "MINICRAFT"),
-                ("/assets/minicraft.css?v=38", "text/css", "#trackKeyboardPalette"),
-                ("/assets/minicraft.js?v=38", "javascript", "trackFeatureVersion:38"),
+                ("/assets/minicraft.css?v=40", "text/css", "#trackKeyboardPalette"),
+                ("/assets/minicraft.js?v=40", "javascript", "trackFeatureVersion:40"),
                 ("/api/rooms", "application/json", "rooms"),
             ]
             for url, content_type, needle in cases:
