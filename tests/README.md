@@ -1,4 +1,4 @@
-# MINICRAFT 完整回归测试
+# TRAINCRAFT 完整回归测试
 
 此目录保存项目的持久化回归测试。测试不使用玩家存档目录；服务器迁移、HTTP 和消息测试均使用临时目录，运行结束后自动清理。
 
@@ -20,7 +20,7 @@
 
 ### 通用方式
 
-在 `minicraft` 项目目录执行：
+在 `traincraft` 项目目录执行：
 
 ```bash
 python3 tests/run_all.py

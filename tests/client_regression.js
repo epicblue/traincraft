@@ -2,9 +2,9 @@
 'use strict';
 
 /**
- * MINICRAFT 客户端回归测试。
+ * TRAINCRAFT 客户端回归测试。
  *
- * 不启动浏览器；从 assets/minicraft.js 提取纯函数，在隔离 VM 中验证轨道、
+ * 不启动浏览器；从 assets/traincraft.js 提取纯函数，在隔离 VM 中验证轨道、
  * 模板、信号、站立物理、快捷键、图标、备份校验和接触面规则。
  */
 
@@ -13,7 +13,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const SOURCE = fs.readFileSync(path.join(ROOT, 'assets', 'minicraft.js'), 'utf8');
+const SOURCE = fs.readFileSync(path.join(ROOT, 'assets', 'traincraft.js'), 'utf8');
 let passed = 0;
 
 function assert(condition, message = 'assertion failed') {

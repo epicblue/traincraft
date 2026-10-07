@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MINICRAFT 项目结构、静态资源、存档格式与 Python 服务器回归测试。"""
+"""TRAINCRAFT 项目结构、静态资源、存档格式与 Python 服务器回归测试。"""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def check(name: str, fn) -> None:
 
 def load_server_module():
     path = ROOT / "server.py"
-    spec = importlib.util.spec_from_file_location("minicraft_server_regression", path)
+    spec = importlib.util.spec_from_file_location("traincraft_server_regression", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     # Python 3.13 dataclasses expects the module to be registered during execution.
@@ -42,8 +42,8 @@ SERVER = load_server_module()
 
 def test_split_project_integrity() -> None:
     html_path = ROOT / "index.html"
-    css_path = ROOT / "assets" / "minicraft.css"
-    js_path = ROOT / "assets" / "minicraft.js"
+    css_path = ROOT / "assets" / "traincraft.css"
+    js_path = ROOT / "assets" / "traincraft.js"
     for path in (html_path, css_path, js_path):
         assert path.is_file() and path.stat().st_size > 100, path
 
@@ -52,13 +52,13 @@ def test_split_project_integrity() -> None:
     js = js_path.read_text("utf-8")
     assert html_path.stat().st_size < 50_000, "index.html became too large again"
     assert "<style>" not in html and "<script>" not in html
-    assert 'href="assets/minicraft.css?v=' in html
-    assert 'src="assets/minicraft.js?v=' in html
+    assert 'href="assets/traincraft.css?v=' in html
+    assert 'src="assets/traincraft.js?v=' in html
     assert "#trackKeyboardPalette" in css
     assert js.count("(() => {") == 1 and js.rstrip().endswith("})();")
     assert "http://" not in css and "https://" not in css
 
-    version_query = re.search(r'minicraft\.js\?v=(\d+)', html)
+    version_query = re.search(r'traincraft\.js\?v=(\d+)', html)
     feature_version = re.search(r'trackFeatureVersion:(\d+)', js)
     assert version_query and feature_version
     assert version_query.group(1) == feature_version.group(1)
@@ -72,7 +72,7 @@ def test_split_project_integrity() -> None:
 def test_backup_gzip_roundtrip() -> None:
     backup: dict[str, Any] = {
         "v": 3,
-        "backupFormat": "MINICRAFT_BACKUP",
+        "backupFormat": "TRAINCRAFT_BACKUP",
         "worldVersion": 13,
         "worldWidth": 128,
         "undergroundDepth": 10,
@@ -109,7 +109,7 @@ def make_legacy_world() -> dict[str, int]:
 
 
 def test_server_world_migration() -> None:
-    with tempfile.TemporaryDirectory(prefix="minicraft-regression-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="traincraft-regression-") as tmp:
         data_dir = Path(tmp)
         room_path = data_dir / "legacy.json"
         original = make_legacy_world()
@@ -149,7 +149,7 @@ class FakeWebSocket:
 
 
 async def test_server_message_validation_async() -> None:
-    with tempfile.TemporaryDirectory(prefix="minicraft-message-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="traincraft-message-") as tmp:
         room = SERVER.Room("messages", Path(tmp))
         room.schedule_save = lambda: None  # type: ignore[method-assign]
         host = SERVER.Client(FakeWebSocket(), "host")
@@ -191,14 +191,14 @@ def test_server_message_validation() -> None:
 
 
 async def test_http_assets_async() -> None:
-    with tempfile.TemporaryDirectory(prefix="minicraft-http-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="traincraft-http-") as tmp:
         app = SERVER.make_app(ROOT, Path(tmp))
         async with TestClient(TestServer(app)) as client:
             cases = [
-                ("/", "text/html", "assets/minicraft.js?v=41"),
-                ("/index.html", "text/html", "MINICRAFT"),
-                ("/assets/minicraft.css?v=41", "text/css", "#trackKeyboardPalette"),
-                ("/assets/minicraft.js?v=41", "javascript", "trackFeatureVersion:41"),
+                ("/", "text/html", "assets/traincraft.js?v=41"),
+                ("/index.html", "text/html", "TRAINCRAFT"),
+                ("/assets/traincraft.css?v=41", "text/css", "#trackKeyboardPalette"),
+                ("/assets/traincraft.js?v=41", "javascript", "trackFeatureVersion:41"),
                 ("/api/rooms", "application/json", "rooms"),
             ]
             for url, content_type, needle in cases:
