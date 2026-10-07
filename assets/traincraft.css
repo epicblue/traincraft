@@ -1,4 +1,4 @@
-/* MINICRAFT 界面样式 · 本地资源，无外部依赖 */
+/* TRAINCRAFT 界面样式 · 本地资源，无外部依赖 */
     :root{--ink:#16231b;--cream:#fff8df;--green:#7fcf5b;--green2:#4f9d50;--gold:#ffd45c;--panel:rgba(18,30,24,.84)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#9edcff;color:white;font-family:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",monospace}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""一键运行 MINICRAFT 完整回归测试。"""
+"""一键运行 TRAINCRAFT 完整回归测试。"""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def main() -> None:
     if not node:
         raise SystemExit("未找到 Node.js；请安装 Node.js 18+ 后再运行客户端回归测试。")
 
-    run("客户端主脚本语法", [node, "--check", "assets/minicraft.js"])
+    run("客户端主脚本语法", [node, "--check", "assets/traincraft.js"])
     run("客户端逻辑回归", [node, "tests/client_regression.js"])
     run("Python服务器语法", [sys.executable, "-m", "py_compile", "server.py"])
     run("项目结构与服务器回归", [sys.executable, "tests/project_server_regression.py"])

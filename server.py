@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MINICRAFT room server: static web hosting + authoritative WebSocket rooms."""
+"""TRAINCRAFT room server: static web hosting + authoritative WebSocket rooms."""
 
 from __future__ import annotations
 
@@ -563,14 +563,14 @@ def make_app(root: Path, data_dir: Path) -> web.Application:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="MINICRAFT 多人共建服务器")
+    parser = argparse.ArgumentParser(description="TRAINCRAFT 多人共建服务器")
     parser.add_argument("--host", default="0.0.0.0", help="监听地址，默认 0.0.0.0")
     parser.add_argument("--port", type=int, default=8765, help="HTTP/WebSocket 端口，默认 8765")
     parser.add_argument("--data-dir", default="server_data", help="房间存档目录")
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
     data_dir = (root / args.data_dir).resolve()
-    print(f"MINICRAFT server: http://{args.host}:{args.port}")
+    print(f"TRAINCRAFT server: http://{args.host}:{args.port}")
     print(f"Room saves: {data_dir}")
     web.run_app(make_app(root, data_dir), host=args.host, port=args.port, print=None)
 
